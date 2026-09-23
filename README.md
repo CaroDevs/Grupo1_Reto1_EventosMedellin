@@ -1,4 +1,4 @@
-# Grupo1_Reto3_EventosMedellin
+# Grupo1_Reto1_EventosMedellin
 <img width="1405" height="161" alt="image" src="https://github.com/user-attachments/assets/fee271ef-feef-4fff-83cb-151b585a7ea9" />
 
 # Arquitectura Monolito Modular
