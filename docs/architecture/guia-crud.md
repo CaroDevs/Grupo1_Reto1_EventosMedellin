@@ -42,7 +42,7 @@ model Category {
 Desde la raíz del proyecto:
 
 ```bash
-npm run db:migrate -w apps/api -- --name add_category
+npm run db:migrate -- --name add_category
 ```
 
 Esto crea el SQL en `apps/api/prisma/migrations/` y lo aplica a tu
