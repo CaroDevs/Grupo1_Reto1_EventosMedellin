@@ -11,8 +11,8 @@
     "dev:web": "npm run dev -w apps/web",
     "db:up": "docker compose -f infra/docker/docker-compose.yml up -d",
     "db:down": "docker compose -f infra/docker/docker-compose.yml down",
-    "db:migrate": "npm run prisma:migrate -w apps/api",
-    "db:seed": "npm run prisma:seed -w apps/api"
+    "db:migrate": "npm run prisma:migrate -w apps/api --",
+    "db:seed": "npm run prisma:seed -w apps/api --"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
