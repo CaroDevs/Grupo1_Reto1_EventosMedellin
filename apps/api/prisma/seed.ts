@@ -6,6 +6,11 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  await prisma.role.createMany({
+    data: [{ name: 'admin' }, { name: 'organizer' }, { name: 'user' }],
+    skipDuplicates: true,
+  });
+
   await prisma.activity.createMany({
     data: [
       {
