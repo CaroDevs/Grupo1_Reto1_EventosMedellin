@@ -9,67 +9,83 @@ Un solo repositorio,  implementa y consume, permitiendo la desincronización ent
 ## Estructura de carpetas
 
 ```text
-apps/
-├── api/                    # Backend (API REST, monolito modular)
-│   ├── src/
-│   │   ├── common/         # Utilidades transversales
-│   │   │   ├── auth/
-│   │   │   ├── errors/
-│   │   │   ├── middleware/
-│   │   │   ├── pagination/
-│   │   │   └── validation/
-│   │   ├── config/         # Configuración de la aplicación
-│   │   ├── database/       # Acceso a datos
-│   │   │   ├── migrations/
-│   │   │   └── seeds/
-│   │   ├── events/         # Eventos de dominio / integración
-│   │   └── modules/        # Módulos de negocio (dominio + aplicación)
-│   │       ├── admin/
-│   │       ├── catalog/
-│   │       ├── discovery/
-│   │       ├── identity/
-│   │       ├── media/
-│   │       ├── notifications/
-│   │       ├── participation/
-│   │       └── recomendations/
-│   └── test/
-├── web/                     # Frontend (SPA)
-│   ├── public/
-│   ├── src/
-│   │   ├── features/        # Flujos orientados al usuario
-│   │   │   ├── activities/
-│   │   │   ├── auth/
-│   │   │   ├── discovery/
-│   │   │   ├── map/
-│   │   │   ├── notifications/
-│   │   │   ├── onboarding/
-│   │   │   ├── organizer-panel/
-│   │   │   └── recommendations/
-│   │   ├── routes/          # Páginas y navegación
-│   │   │   ├── admin/
-│   │   │   ├── auth/
-│   │   │   ├── organizer/
-│   │   │   ├── public/
-│   │   │   └── user/
-│   │   └── shared/          # Componentes y utilidades compartidas
-│   │       ├── config/
-│   │       ├── http/
-│   │       ├── layout/
-│   │       ├── ui/
-│   │       └── utils/
-│   └── test/
-├── packages/                # Paquetes compartidos entre apps
+.
+├── apps/
+│   ├── api/                   # Backend (NestJS, monolito modular)
+│   │   ├── prisma/            # Schema, migraciones y seed de Prisma
+│   │   └── src/
+│   │       ├── common/        # Utilidades transversales
+│   │       │   ├── auth/
+│   │       │   ├── errors/
+│   │       │   ├── middleware/
+│   │       │   ├── pagination/
+│   │       │   └── validation/
+│   │       ├── config/        # Configuración de la aplicación
+│   │       ├── database/      # PrismaService / PrismaModule
+│   │       ├── events/        # Eventos de dominio / integración
+│   │       └── modules/       # Módulos de negocio (dominio + aplicación)
+│   │           ├── admin/
+│   │           ├── catalog/   # Único módulo implementado por ahora
+│   │           ├── discovery/
+│   │           ├── identity/
+│   │           ├── media/
+│   │           ├── notifications/
+│   │           ├── participation/
+│   │           └── recomendations/
+│   └── web/                   # Frontend (Vite + React + TypeScript)
+│       ├── public/
+│       └── src/
+│           ├── features/      # Flujos orientados al usuario
+│           ├── routes/        # Páginas y navegación
+│           └── shared/        # Componentes y utilidades compartidas
+├── packages/                  # Paquetes compartidos entre apps (aún vacíos)
 │   ├── api-client/
 │   ├── contracts/
 │   ├── shared-types/
 │   └── tooling-config/
-├── docs/                    # Documentación del proyecto
+├── docs/                      # Documentación del proyecto
 │   ├── api/
 │   ├── architecture/
 │   ├── data-model/
 │   └── product/
-└── tools/                   # Scripts y generadores internos
+├── infra/
+│   └── docker/                # docker-compose.yml de Postgres
+└── tools/                     # Scripts y generadores internos
     ├── generators/
     ├── mocks/
     └── scripts/
 ```
+
+Las carpetas vacías se preservan con un `.gitkeep`. El único módulo de negocio
+implementado por ahora es `catalog`, como ejemplo mínimo del patrón modular
+(controller → service → Prisma → Postgres); el resto quedan listas para
+desarrollarse.
+
+## Cómo levantar el proyecto
+
+Requisitos: Node.js 22+, Docker.
+
+```bash
+npm install                 # instala dependencias de api y web (workspaces npm)
+
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env
+
+npm run db:up                # levanta Postgres con Docker Compose
+npm run db:migrate           # aplica las migraciones de Prisma
+npm run db:seed              # inserta actividades de ejemplo
+
+npm run dev                  # corre api (puerto 3000) y web (puerto 5173) juntos
+```
+
+La API queda disponible en `http://localhost:3000` (por ahora solo
+`GET /activities`) y el frontend en `http://localhost:5173`, consumiéndola.
+
+¿Primera vez con este stack? Lee
+[docs/architecture/stack.md](docs/architecture/stack.md): explica qué es
+cada tecnología (NestJS, Prisma, PostgreSQL, React, Vite) y cómo se
+comunican front y back.
+
+¿Vas a agregar un CRUD nuevo (backend + frontend)? Sigue
+[docs/architecture/guia-crud.md](docs/architecture/guia-crud.md), un
+paso a paso completo con código de ejemplo.
