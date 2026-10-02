@@ -11,11 +11,11 @@ export class UserService {
 
   async create(dto: CreateUserDto) {
     const role = await this.prisma.role.findUnique({
-      where: { name: 'user' },
+      where: { name: 'User' },
     });
 
     if (!role) {
-      throw new NotFoundException('El rol "user" no existe. ¿Corriste el seed?');
+      throw new NotFoundException('El rol "User" no existe. ¿Corriste el seed?');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
