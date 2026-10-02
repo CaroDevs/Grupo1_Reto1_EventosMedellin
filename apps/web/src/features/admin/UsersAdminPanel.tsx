@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { apiDelete, apiGet } from '../../shared/http/client';
 import type { User } from '../auth/User';
 import { EditUserModal } from './EditUserModal';
+import { CreateUserModal } from './CreateUserModal';
 
 export function UsersAdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [creating, setCreating] = useState(false);
 
   async function loadUsers() {
     try {
@@ -51,6 +53,12 @@ export function UsersAdminPanel() {
 
   return (
     <>
+      <div className="d-flex justify-content-end mb-3">
+        <button type="button" className="btn btn-success" onClick={() => setCreating(true)}>
+          <i className="fa-solid fa-plus" /> Crear usuario
+        </button>
+      </div>
+
       <div className="table-responsive">
         <table className="table table-striped align-middle">
           <thead>
@@ -97,6 +105,16 @@ export function UsersAdminPanel() {
           onClose={() => setEditingUser(null)}
           onSaved={() => {
             setEditingUser(null);
+            void loadUsers();
+          }}
+        />
+      )}
+
+      {creating && (
+        <CreateUserModal
+          onClose={() => setCreating(false)}
+          onCreated={() => {
+            setCreating(false);
             void loadUsers();
           }}
         />
