@@ -383,12 +383,98 @@ con "Administrar usuarios":
 (`ADMIN_ROLE` sale de `@medellin-activities/shared-types` — ver
 [stack.md](./stack.md#el-paquete-shared-types) si no sabes qué es eso.)
 
+Si la página solo necesita que haya **alguien** logueado (sin importar el
+rol — ej. "mi perfil"), usá `RequireAuth` en vez de `RequireAdmin`. Esto
+protege la UI; el endpoint del backend que esa página consuma necesita su
+propia protección aparte — ver
+["Proteger una ruta nueva"](#proteger-una-ruta-nueva) más abajo.
+
 ### 3. Pruébalo en el navegador
 
 Con `npm run dev` corriendo, abre `http://localhost:5173` y prueba crear
 y borrar categorías desde la UI.
 
 ---
+
+## Proteger una ruta nueva
+
+Por defecto, cualquier endpoint que crees queda **abierto** — cualquiera
+puede llamarlo, logueado o no. Si tu CRUD maneja algo sensible, hay que
+protegerlo explícitamente en **dos lugares distintos**: el backend (lo
+que de verdad importa, es lo único que no se puede saltar) y el frontend
+(para que la UI no muestre botones que la persona no puede usar). Si no
+sabés qué es un JWT o por qué funciona así, primero lee
+[stack.md](./stack.md#jwt-json-web-token).
+
+### Backend — acá es donde realmente se protege algo
+
+En el controller, agregá los `Guard`s a cada método que quieras proteger
+(no hace falta en los que deban quedar públicos, como un `GET` de
+lectura o un registro):
+
+```ts
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
+import { RolesGuard } from '../../common/auth/roles.guard';
+import { Roles } from '../../common/auth/roles.decorator';
+import { ADMIN_ROLE } from '@medellin-activities/shared-types';
+
+// Exige estar logueado, sin importar el rol:
+@UseGuards(JwtAuthGuard)
+@Get()
+findAll() { /* ... */ }
+
+// Exige estar logueado Y tener el rol Admin:
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(ADMIN_ROLE)
+@Delete(':id')
+remove(@Param('id') id: string) { /* ... */ }
+```
+
+`RolesGuard` siempre va **después** de `JwtAuthGuard` en la lista — el
+primero valida el token y llena `request.user`, el segundo lee ese
+`request.user` para comparar el rol. Usar `RolesGuard` solo, sin
+`JwtAuthGuard`, no tiene sentido: no habría ningún usuario que comparar.
+
+Para que el `Guard` funcione, tu módulo necesita acceso al `JwtService`
+— importá `AuthModule` en tu `<entidad>.module.ts`:
+
+```ts
+import { AuthModule } from '../auth/auth.module';
+
+@Module({
+  imports: [AuthModule],
+  // ...
+})
+export class CategoryModule {}
+```
+
+### Frontend — esto solo mejora la experiencia, no protege nada
+
+Esto esconde botones/páginas y redirige si no corresponde, pero **no es
+seguridad real** — es el backend el que de verdad rechaza la petición.
+Elegí el componente según lo que necesites:
+
+| Necesitás que... | Componente | Si no cumple, redirige a |
+|---|---|---|
+| Haya alguien logueado, cualquier rol | `RequireAuth` | `/login` |
+| Haya alguien logueado Y sea admin | `RequireAdmin` | `/activities` |
+
+```tsx
+import { RequireAuth } from './shared/auth/RequireAuth';
+
+<Route
+  path="/perfil"
+  element={
+    <RequireAuth>
+      <ProfilePage />
+    </RequireAuth>
+  }
+/>
+```
+
+El ejemplo de `RequireAdmin` ya está en la [Parte 2, paso 2](#2-crea-la-página-de-ruta-y-la-conectas)
+de esta guía, arriba.
 
 ## Resumen del patrón
 
