@@ -77,6 +77,7 @@ npm run db:migrate           # aplica las migraciones de Prisma
 npm run db:seed              # inserta actividades, roles y un usuario admin de prueba
 
 npm run dev                  # corre api (puerto 3000) y web (puerto 5173) juntos
+npm run test                 # corre los tests de api y web
 ```
 
 La API queda en `http://localhost:3000` y el frontend en

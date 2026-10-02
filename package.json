@@ -13,7 +13,10 @@
     "db:up": "docker compose -f infra/docker/docker-compose.yml up -d",
     "db:down": "docker compose -f infra/docker/docker-compose.yml down",
     "db:migrate": "npm run prisma:migrate -w apps/api --",
-    "db:seed": "npm run prisma:seed -w apps/api --"
+    "db:seed": "npm run prisma:seed -w apps/api --",
+    "test": "npm run test -w apps/api && npm run test -w apps/web",
+    "test:api": "npm run test -w apps/api",
+    "test:web": "npm run test -w apps/web"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
@@ -22,6 +25,8 @@
     "@prisma/engines@7.10.0": true,
     "esbuild@0.28.2": true,
     "prisma@7.10.0": true,
-    "bcrypt@6.0.0": true
+    "bcrypt@6.0.0": true,
+    "@parcel/watcher@2.6.0": true,
+    "unrs-resolver@1.12.2": true
   }
 }

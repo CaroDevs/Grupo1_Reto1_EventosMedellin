@@ -219,6 +219,38 @@ curl -X PATCH http://localhost:3000/categories/<id> -H "Content-Type: applicatio
 curl -X DELETE http://localhost:3000/categories/<id>
 ```
 
+### 6. Agrégale un test al service
+
+No hace falta base de datos real — le pasas un `PrismaService` falso y
+revisás que la lógica haga lo que debería. Creá
+`category.service.spec.ts` al lado de `category.service.ts`:
+
+```ts
+import { describe, expect, it, jest } from '@jest/globals';
+import { CategoryService } from './category.service';
+import { PrismaService } from '../../database/prisma.service';
+
+describe('CategoryService', () => {
+  it('crea una categoría', async () => {
+    const prisma = {
+      category: { create: jest.fn().mockResolvedValue({ id: '1', name: 'Cultural' }) },
+    } as unknown as PrismaService;
+
+    const service = new CategoryService(prisma);
+    const result = await service.create({ name: 'Cultural' });
+
+    expect(result).toEqual({ id: '1', name: 'Cultural' });
+  });
+});
+```
+
+Correlo con `npm run test:api` desde la raíz. Más ejemplos reales (con
+mocks más elaborados, casos de error, etc.) en
+[`user.service.spec.ts`](../../apps/api/src/modules/user/user.service.spec.ts)
+— y si no sabés por qué los `.spec.ts` importan `jest` de
+`@jest/globals` en vez de usarlo como variable global, está explicado en
+[stack.md](./stack.md#jest-backend).
+
 ---
 
 ## Parte 2 — Frontend (`apps/web`)
@@ -394,6 +426,16 @@ propia protección aparte — ver
 Con `npm run dev` corriendo, abre `http://localhost:5173` y prueba crear
 y borrar categorías desde la UI.
 
+### 4. (Opcional) Agrégale un test al componente
+
+Con [Testing Library](https://testing-library.com/), que simula cómo
+interactuaría una persona real (buscar un input por su label, escribir,
+hacer click) en vez de revisar detalles internos del componente. Mirá
+[`LoginForm.test.tsx`](../../apps/web/src/features/auth/LoginForm.test.tsx)
+como ejemplo completo (con `apiPost` simulado y verificando que navega a
+otra página al tener éxito). Correlo con `npm run test:web` desde la
+raíz.
+
 ---
 
 ## Proteger una ruta nueva
@@ -488,6 +530,8 @@ de esta guía, arriba.
 | Frontend | `features/<entidad>/*.tsx` | UI + llamadas a la API |
 | Frontend | `routes/<área>/<Entidad>Page.tsx` | Página que monta la feature en una URL |
 | Compartido | `packages/shared-types` | Valores/tipos que deben ser *idénticos* en los dos lados (ver [stack.md](./stack.md#el-paquete-shared-types)) |
+| Backend | `<entidad>.service.spec.ts` | Test del service, con Prisma simulado (ver [stack.md](./stack.md#jest-backend)) |
+| Frontend | `<Componente>.test.tsx` | Test del componente, con Testing Library (ver [stack.md](./stack.md#vitest-frontend)) |
 
 **Ejemplos reales en el repo, según qué estés buscando:**
 

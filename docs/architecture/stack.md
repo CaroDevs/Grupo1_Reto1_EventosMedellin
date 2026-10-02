@@ -267,6 +267,62 @@ dependencia (`"@medellin-activities/shared-types": "*"` en sus
 > Node, aunque `tsc` y Vite no se quejen. Por eso hoy todo vive en un solo
 > `index.ts` — evita el problema por completo.
 
+## Testing
+
+Hasta hace poco no había ni un solo test en el proyecto. Con lo que ya
+hay construido (roles, guards, login, CRUD completo), probar todo a
+mano con curl cada vez que se toca algo deja de ser sostenible — un test
+corre en segundos y no se olvida de ningún caso.
+
+### Jest (backend)
+
+**Qué es:** el framework de pruebas más usado en el ecosistema Node —
+NestJS lo recomienda "de fábrica". Un archivo `algo.spec.ts` al lado de
+`algo.ts` describe casos (`it('hace tal cosa', () => {...})`) y compara
+resultados esperados contra reales (`expect(resultado).toBe(...)`).
+
+**Cómo lo usamos:** pruebas **unitarias** — sin base de datos real, sin
+levantar el servidor. Los `services`/`guards` reciben un `PrismaService`
+(o `JwtService`) **falso** (`jest.fn()`), así probamos la lógica sola,
+rápido y sin depender de que Postgres esté corriendo. Ejemplos reales:
+[`user.service.spec.ts`](../../apps/api/src/modules/user/user.service.spec.ts),
+[`jwt-auth.guard.spec.ts`](../../apps/api/src/common/auth/jwt-auth.guard.spec.ts).
+
+**Correrlos:** `npm run test:api` desde la raíz (o `npm test` dentro de
+`apps/api`).
+
+> Detalle técnico si te da curiosidad: NestJS 12 publica sus paquetes
+> como ESM puro (no CommonJS), y Jest por defecto no puede cargarlos con
+> `require()`. Por eso el script de test corre con
+> `node --experimental-vm-modules` y los `.spec.ts` importan
+> `describe`/`it`/`expect`/`jest` desde `@jest/globals` en vez de usarlos
+> como variables globales automáticas — es lo que exige el modo ESM de
+> Jest. No hace falta entender esto para escribir un test nuevo, solo
+> copiar el patrón de uno que ya exista.
+
+### Vitest (frontend)
+
+**Qué es:** el equivalente a Jest pero integrado con Vite — usa el mismo
+motor por debajo, así que no hace falta configurar un transformador de
+TypeScript aparte como si hiciera falta con Jest.
+
+**Cómo lo usamos:** con [Testing Library](https://testing-library.com/),
+que renderiza un componente real (en un DOM simulado, `jsdom`) y lo
+prueba como lo usaría una persona: buscando un input por su label,
+escribiendo, haciendo click, y comprobando qué aparece en pantalla — no
+se prueban detalles internos de implementación. Ejemplos reales:
+[`session.test.ts`](../../apps/web/src/shared/auth/session.test.ts) (lógica
+pura, sin renderizar nada),
+[`LoginForm.test.tsx`](../../apps/web/src/features/auth/LoginForm.test.tsx) (un
+formulario completo, con `apiPost` simulado).
+
+**Correrlos:** `npm run test:web` desde la raíz.
+
+### Los dos juntos
+
+`npm run test` desde la raíz corre primero los del backend y después
+los del frontend.
+
 ## Cómo se comunican
 
 El navegador (React) le hace peticiones HTTP al backend (NestJS) usando
