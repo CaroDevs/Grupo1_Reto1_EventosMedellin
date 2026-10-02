@@ -1,8 +1,13 @@
 import { useState, type SubmitEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiPost } from '../../shared/http/client';
-import { saveSessionUser } from '../../shared/auth/session';
+import { saveSession } from '../../shared/auth/session';
 import type { User } from './User';
+
+interface LoginResponse {
+  user: User;
+  accessToken: string;
+}
 
 export function RegisterForm() {
   const navigate = useNavigate();
@@ -18,8 +23,12 @@ export function RegisterForm() {
     setLoading(true);
 
     try {
-      const user = await apiPost<User>('/users', { name, email, password });
-      saveSessionUser(user);
+      await apiPost<User>('/users', { name, email, password });
+      const { user, accessToken } = await apiPost<LoginResponse>('/auth/login', {
+        email,
+        password,
+      });
+      saveSession(user, accessToken);
       void navigate('/activities');
     } catch (err) {
       setError(

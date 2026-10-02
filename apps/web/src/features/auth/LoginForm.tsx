@@ -1,8 +1,13 @@
 import { useState, type SubmitEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiPost } from '../../shared/http/client';
-import { saveSessionUser } from '../../shared/auth/session';
+import { saveSession } from '../../shared/auth/session';
 import type { User } from './User';
+
+interface LoginResponse {
+  user: User;
+  accessToken: string;
+}
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -17,8 +22,11 @@ export function LoginForm() {
     setLoading(true);
 
     try {
-      const user = await apiPost<User>('/auth/login', { email, password });
-      saveSessionUser(user);
+      const { user, accessToken } = await apiPost<LoginResponse>('/auth/login', {
+        email,
+        password,
+      });
+      saveSession(user, accessToken);
       void navigate('/activities');
     } catch {
       setError('Email o contraseña incorrectos.');

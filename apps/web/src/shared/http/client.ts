@@ -1,10 +1,21 @@
+import { clearSessionUser, getSessionToken } from '../auth/session';
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getSessionToken();
+
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
     ...options,
   });
+
+  if (response.status === 401) {
+    clearSessionUser();
+  }
 
   if (!response.ok) {
     throw new Error(`Error ${response.status} al consultar ${path}`);
