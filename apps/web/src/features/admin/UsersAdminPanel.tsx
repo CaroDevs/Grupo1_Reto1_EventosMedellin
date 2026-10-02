@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { apiDelete, apiGet } from '../../shared/http/client';
 import type { User } from '../auth/User';
+import { EditUserModal } from './EditUserModal';
 
 export function UsersAdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   async function loadUsers() {
     try {
@@ -48,37 +50,57 @@ export function UsersAdminPanel() {
   }
 
   return (
-    <div className="table-responsive">
-      <table className="table table-striped align-middle">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Rol</th>
-            <th className="text-end">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td>{user.name}</td>
-              <td>{user.email}</td>
-              <td>
-                <span className="badge text-bg-secondary">{user.role.name}</span>
-              </td>
-              <td className="text-end">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={() => handleDelete(user.id, user.name)}
-                >
-                  Borrar
-                </button>
-              </td>
+    <>
+      <div className="table-responsive">
+        <table className="table table-striped align-middle">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th className="text-end">Acciones</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id}>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>
+                  <span className="badge text-bg-success">{user.role.name}</span>
+                </td>
+                <td className="text-end">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary me-2"
+                    onClick={() => setEditingUser(user)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => handleDelete(user.id, user.name)}
+                  >
+                    Borrar
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSaved={() => {
+            setEditingUser(null);
+            void loadUsers();
+          }}
+        />
+      )}
+    </>
   );
 }
