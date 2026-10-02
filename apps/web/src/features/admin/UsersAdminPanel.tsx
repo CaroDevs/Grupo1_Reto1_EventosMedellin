@@ -3,6 +3,7 @@ import { apiDelete, apiGet } from '../../shared/http/client';
 import type { User } from '../auth/User';
 import { EditUserModal } from './EditUserModal';
 import { CreateUserModal } from './CreateUserModal';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 
 export function UsersAdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
@@ -10,6 +11,7 @@ export function UsersAdminPanel() {
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [creating, setCreating] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
 
   async function loadUsers() {
     try {
@@ -25,11 +27,11 @@ export function UsersAdminPanel() {
     loadUsers();
   }, []);
 
-  async function handleDelete(id: string, name: string) {
-    const confirmed = window.confirm(`¿Borrar a "${name}"? Esta acción no se puede deshacer.`);
-    if (!confirmed) return;
+  async function handleConfirmDelete() {
+    if (!deletingUser) return;
 
-    await apiDelete(`/users/${id}`);
+    await apiDelete(`/users/${deletingUser.id}`);
+    setDeletingUser(null);
     await loadUsers();
   }
 
@@ -88,7 +90,7 @@ export function UsersAdminPanel() {
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-danger"
-                    onClick={() => handleDelete(user.id, user.name)}
+                    onClick={() => setDeletingUser(user)}
                   >
                     <i className="fa-solid fa-trash" /> Borrar
                   </button>
@@ -117,6 +119,14 @@ export function UsersAdminPanel() {
             setCreating(false);
             void loadUsers();
           }}
+        />
+      )}
+
+      {deletingUser && (
+        <ConfirmDeleteModal
+          name={deletingUser.name}
+          onCancel={() => setDeletingUser(null)}
+          onConfirm={() => void handleConfirmDelete()}
         />
       )}
     </>
