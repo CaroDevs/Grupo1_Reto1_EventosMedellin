@@ -36,6 +36,13 @@ export function NavBar() {
                 Actividades
               </Link>
             </li>
+            {user?.role.name === 'Admin' && (
+              <li className="nav-item">
+                <Link className="nav-link" to="/admin/users">
+                  Administrar usuarios
+                </Link>
+              </li>
+            )}
           </ul>
 
           <ul className="navbar-nav">
