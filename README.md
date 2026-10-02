@@ -25,24 +25,25 @@ Un solo repositorio,  implementa y consume, permitiendo la desincronización ent
 │   │       ├── events/        # Eventos de dominio / integración
 │   │       └── modules/       # Módulos de negocio (dominio + aplicación)
 │   │           ├── admin/
-│   │           ├── catalog/   # Único módulo implementado por ahora
+│   │           ├── auth/      # Login (POST /auth/login)
+│   │           ├── catalog/   # Actividades (solo lectura por ahora)
 │   │           ├── discovery/
-│   │           ├── identity/
 │   │           ├── media/
 │   │           ├── notifications/
 │   │           ├── participation/
-│   │           └── recomendations/
+│   │           ├── recomendations/
+│   │           └── user/      # CRUD de usuarios + roles
 │   └── web/                   # Frontend (Vite + React + TypeScript)
 │       ├── public/
 │       └── src/
 │           ├── features/      # Flujos orientados al usuario
 │           ├── routes/        # Páginas y navegación
 │           └── shared/        # Componentes y utilidades compartidas
-├── packages/                  # Paquetes compartidos entre apps (aún vacíos)
-│   ├── api-client/
-│   ├── contracts/
-│   ├── shared-types/
-│   └── tooling-config/
+├── packages/                  # Paquetes compartidos entre apps
+│   ├── api-client/            # (vacío todavía)
+│   ├── contracts/             # (vacío todavía)
+│   ├── shared-types/          # Valores/tipos usados por api y web a la vez (ej. roles)
+│   └── tooling-config/        # (vacío todavía)
 ├── docs/                      # Documentación del proyecto
 │   ├── api/
 │   ├── architecture/
@@ -56,10 +57,10 @@ Un solo repositorio,  implementa y consume, permitiendo la desincronización ent
     └── scripts/
 ```
 
-Las carpetas vacías se preservan con un `.gitkeep`. El único módulo de negocio
-implementado por ahora es `catalog`, como ejemplo mínimo del patrón modular
-(controller → service → Prisma → Postgres); el resto quedan listas para
-desarrollarse.
+Las carpetas vacías se preservan con un `.gitkeep`. Los módulos con código
+real hoy son `catalog` (actividades, solo lectura — el ejemplo más simple
+del patrón modular), `user` (CRUD completo de usuarios, con roles) y
+`auth` (login); el resto quedan listas para desarrollarse.
 
 ## Cómo levantar el proyecto
 
@@ -73,18 +74,27 @@ cp apps/web/.env.example apps/web/.env
 
 npm run db:up                # levanta Postgres con Docker Compose
 npm run db:migrate           # aplica las migraciones de Prisma
-npm run db:seed              # inserta actividades de ejemplo
+npm run db:seed              # inserta actividades, roles y un usuario admin de prueba
 
 npm run dev                  # corre api (puerto 3000) y web (puerto 5173) juntos
 ```
 
-La API queda disponible en `http://localhost:3000` (por ahora solo
-`GET /activities`) y el frontend en `http://localhost:5173`, consumiéndola.
+La API queda en `http://localhost:3000` y el frontend en
+`http://localhost:5173`. Hoy se puede: ver actividades, registrarse e
+iniciar sesión, y (como admin) listar/crear/editar/borrar usuarios desde
+`/admin/users`.
+
+Para probar la parte de administrador, el seed deja un usuario listo:
+
+```
+email:      admin@itm.com
+contraseña: 12345678
+```
 
 ¿Primera vez con este stack? Lee
 [docs/architecture/stack.md](docs/architecture/stack.md): explica qué es
-cada tecnología (NestJS, Prisma, PostgreSQL, React, Vite) y cómo se
-comunican front y back.
+cada tecnología (NestJS, Prisma, PostgreSQL, React, Vite, React Router,
+Bootstrap, FontAwesome...) y cómo se comunican front y back.
 
 ¿Vas a agregar un CRUD nuevo (backend + frontend)? Sigue
 [docs/architecture/guia-crud.md](docs/architecture/guia-crud.md), un

@@ -45,8 +45,8 @@ columnas.
 **Para qué lo usamos:**
 
 - [`schema.prisma`](../../apps/api/prisma/schema.prisma): acá se define
-  cada "tabla" de la base de datos como un `model`. Ahora mismo solo existe
-  `Activity`. Cuando hagas tu CRUD, agregas tu propio `model` acá.
+  cada "tabla" de la base de datos como un `model`. Hoy existen `Activity`,
+  `User` y `Role`. Cuando hagas tu CRUD, agregas tu propio `model` acá.
 - **Migraciones** (`apps/api/prisma/migrations/`): cada vez que cambias el
   schema, corres `npm run db:migrate` y Prisma genera el SQL necesario
   para actualizar la base de datos real, y lo guarda versionado (así todo
@@ -63,6 +63,19 @@ usuarios, inscripciones) en disco, de forma permanente.
 contenedor Docker (ver [`infra/docker/docker-compose.yml`](../../infra/docker/docker-compose.yml)),
 así todo el equipo tiene exactamente la misma versión sin pelear con
 instalaciones distintas. Se levanta con `npm run db:up`.
+
+### bcrypt
+
+**Qué es:** una librería para "hashear" contraseñas — convertirlas en un
+texto irreversible antes de guardarlas. Nunca se guarda la contraseña tal
+cual el usuario la escribió.
+
+**Para qué lo usamos:** en [`user.service.ts`](../../apps/api/src/modules/user/user.service.ts),
+al crear un usuario, `bcrypt.hash(password, 10)` reemplaza la contraseña
+antes de guardarla. Al iniciar sesión
+([`auth.service.ts`](../../apps/api/src/modules/auth/auth.service.ts)),
+`bcrypt.compare(password, user.password)` compara lo que escribió la
+persona contra ese hash — nunca se "deshashea" nada, solo se compara.
 
 ## Frontend (`apps/web`)
 
@@ -88,6 +101,53 @@ No escribes código de Vite directamente, solo lo configuras una vez
 ([`vite.config.ts`](../../apps/web/vite.config.ts)) y después te olvidas
 de que existe.
 
+### React Router
+
+**Qué es:** la librería que le da a React la noción de "páginas" —
+decide qué componente mostrar según la URL del navegador (`/activities`,
+`/login`, `/admin/users`...), sin recargar la página entera.
+
+**Para qué lo usamos:**
+
+- [`main.tsx`](../../apps/web/src/main.tsx) envuelve toda la app en
+  `<BrowserRouter>` — una sola vez, al arrancar.
+- [`App.tsx`](../../apps/web/src/App.tsx) define las rutas con
+  `<Routes>`/`<Route path="..." element={<Página />} />`.
+- Cada `<Route>` apunta a un componente de `apps/web/src/routes/` (no de
+  `features/` — la distinción está en [guia-crud.md](./guia-crud.md#2-crea-la-página-de-ruta-y-la-conectas)).
+- `<Link to="/activities">` reemplaza al `<a href="...">` normal —
+  navega sin recargar la página.
+- `useNavigate()` navega desde código (ej. después de un login exitoso,
+  en vez de desde un click).
+
+### Bootstrap
+
+**Qué es:** una librería de CSS con componentes ya armados (botones,
+formularios, tablas, modales, menú de navegación) y un sistema de grilla
+responsive — se usa poniendo clases en el `className` del JSX, sin
+escribir CSS propio.
+
+**Para qué lo usamos:** es el diseño visual de toda la app. Se importa
+una sola vez en [`main.tsx`](../../apps/web/src/main.tsx) (el CSS y el
+JS que necesitan los menús/modales para abrirse y cerrarse) y después se
+usa en cualquier componente con clases como `btn btn-primary`,
+`form-control`, `modal`, `navbar`. La
+[documentación oficial de Bootstrap](https://getbootstrap.com/docs/) es
+el mejor lugar para buscar qué clase necesitas — no hay que
+memorizarlas.
+
+### FontAwesome
+
+**Qué es:** una librería de íconos. Se usan como si fueran texto, con la
+etiqueta `<i>` y una clase (ej. `<i className="fa-solid fa-trash" />`).
+
+**Para qué lo usamos:** íconos en botones y menús (ej. el lápiz de
+"Editar" o la caneca de "Borrar" en el
+[panel de admin](../../apps/web/src/features/admin/UsersAdminPanel.tsx)). Para
+buscar el nombre de un ícono nuevo, usa el
+[buscador de íconos de FontAwesome](https://fontawesome.com/search?o=r&m=free) y
+copia la clase que te muestra (ej. `fa-solid fa-pen`).
+
 ### TypeScript (en ambos lados)
 
 **Qué es:** JavaScript con tipos. Te avisa en el editor, antes de
@@ -100,6 +160,59 @@ forma de los datos. Por ejemplo, el tipo `Activity` del frontend
 describe exactamente los mismos campos que el `model Activity` de Prisma
 en el backend. Si el backend cambia un campo y el frontend no se entera,
 TypeScript ayuda a detectarlo más rápido.
+
+### El paquete shared-types
+
+**Qué es:** un paquete más del monorepo (como `apps/api` o `apps/web`),
+pero sin servidor ni interfaz propia — solo código TypeScript que **los
+otros dos importan**. Es la diferencia entre "backend y frontend tienen
+cada uno su copia del mismo valor" (hay que acordarse de cambiar las dos
+si algo cambia) y "los dos importan el mismo archivo" (cambias un lugar,
+los dos se enteran).
+
+**Para qué lo usamos hoy:** los nombres de rol (`'User'`, `'Organizer'`,
+`'Admin'`) viven en un solo lugar,
+[`packages/shared-types/src/index.ts`](../../packages/shared-types/src/index.ts):
+
+```ts
+export const ROLE_NAMES = ['User', 'Organizer', 'Admin'] as const;
+export type RoleName = (typeof ROLE_NAMES)[number];
+export const DEFAULT_ROLE: RoleName = 'User';
+export const ADMIN_ROLE: RoleName = 'Admin';
+```
+
+Y se importa igual desde los dos lados:
+
+```ts
+import { ROLE_NAMES, ADMIN_ROLE, type RoleName } from '@medellin-activities/shared-types';
+```
+
+- En el backend, `ROLE_NAMES` alimenta el `@IsIn(...)` del DTO (valida
+  que el rol que llega por `PATCH` sea uno de los válidos).
+- En el frontend, el mismo `ROLE_NAMES` llena el `<select>` del modal de
+  editar usuario, y `RoleName` tipa el campo `role.name` para que
+  TypeScript marque error si comparas mal escrito (`'admin'` en vez de
+  `'Admin'`).
+
+**Cuándo usarlo:** cuando un valor o una forma de dato tiene que ser
+*exactamente* igual en los dos lados y además puede cambiar (una lista de
+roles, de categorías fijas, de estados posibles de algo). No lo uses para
+cada tipo — el tipo `Activity` del frontend, por ejemplo, sigue viviendo
+solo en `features/activities/Activity.ts`, porque no hay ningún valor
+compartido que validar, solo una forma de datos que ya es razonablemente
+fácil de mantener sincronizada a mano.
+
+**Cómo agregar algo nuevo ahí:** editas
+`packages/shared-types/src/index.ts` y lo exportas. No hace falta
+configurar nada más — `apps/api` y `apps/web` ya lo tienen como
+dependencia (`"@medellin-activities/shared-types": "*"` en sus
+`package.json`), así que el import funciona apenas lo exportes.
+
+> Un detalle técnico si alguna vez agregas más de un archivo ahí adentro:
+> los imports relativos internos del paquete necesitan extensión
+> explícita (`./algo.js`, no `./algo`) para que funcionen en runtime con
+> Node, aunque `tsc` y Vite no se quejen. Por eso hoy todo vive en un solo
+> `index.ts` — evita el problema por completo.
 
 ## Cómo se comunican
 
