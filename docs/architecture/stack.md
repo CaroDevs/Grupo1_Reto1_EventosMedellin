@@ -77,6 +77,55 @@ antes de guardarla. Al iniciar sesión
 `bcrypt.compare(password, user.password)` compara lo que escribió la
 persona contra ese hash — nunca se "deshashea" nada, solo se compara.
 
+### JWT (JSON Web Token)
+
+**Qué es:** un "comprobante" firmado digitalmente que demuestra quién
+sos, sin que el backend tenga que acordarse de vos entre una petición y
+la siguiente. Es un texto (parece basura, tipo
+`eyJhbGci...`) que contiene datos (en nuestro caso, el `id` del usuario y
+su rol) más una firma que solo el backend puede generar y verificar —
+si alguien lo edita a mano, la firma deja de coincidir y el backend lo
+rechaza.
+
+**Por qué lo usamos (y por qué no antes):** al principio, `POST
+/auth/login` solo verificaba el email/contraseña y devolvía el usuario,
+sin ningún comprobante — suficiente mientras no hubiera nada que
+proteger. Eso cambió cuando armamos el panel de administración: con
+`PATCH /users/:id` cualquiera podía ascender a cualquiera a `Admin`
+mandando la petición directo con curl, sin pasar por la UI. Ahí sí hacía
+falta una forma de que el backend supiera "esta petición viene
+realmente de alguien que inició sesión como admin" — y para eso sirve
+JWT.
+
+**Cómo funciona acá, de punta a punta:**
+
+1. Login correcto → [`auth.service.ts`](../../apps/api/src/modules/auth/auth.service.ts)
+   firma un token con `jwtService.signAsync({ sub: user.id, role: user.role.name })`
+   y lo devuelve junto al usuario: `{ user, accessToken }`.
+2. El frontend lo guarda ([`session.ts`](../../apps/web/src/shared/auth/session.ts),
+   `saveSession(user, accessToken)`) y lo manda en cada petición siguiente,
+   en el header `Authorization: Bearer <token>`
+   ([`client.ts`](../../apps/web/src/shared/http/client.ts) lo hace
+   automático — no hay que acordarse de agregarlo a mano).
+3. En el backend, un endpoint protegido usa
+   [`JwtAuthGuard`](../../apps/api/src/common/auth/jwt-auth.guard.ts): lee
+   ese header, verifica la firma con el mismo secreto que la generó
+   (`JWT_SECRET` en `.env`), y si es válida deja pasar la petición — si
+   no, responde `401`.
+4. Si además el endpoint necesita un rol específico,
+   [`RolesGuard`](../../apps/api/src/common/auth/roles.guard.ts) +
+   el decorador `@Roles('Admin')` comparan el rol que venía *dentro* del
+   token (no uno que mande el cliente aparte, que se podría falsificar)
+   contra lo que el endpoint exige — si no coincide, responde `403`.
+5. Si el backend responde `401` (token vencido o inválido),
+   `client.ts` borra la sesión local sola — así el frontend nunca se
+   queda "logueado" en pantalla con un token que el backend ya no
+   acepta.
+
+**Cómo proteger un endpoint o una vista nueva:** ver la sección
+["Proteger una ruta nueva"](./guia-crud.md#proteger-una-ruta-nueva) de
+la guía de CRUD.
+
 ## Frontend (`apps/web`)
 
 ### React

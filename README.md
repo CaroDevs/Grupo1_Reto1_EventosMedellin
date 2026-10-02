@@ -82,7 +82,10 @@ npm run dev                  # corre api (puerto 3000) y web (puerto 5173) junto
 La API queda en `http://localhost:3000` y el frontend en
 `http://localhost:5173`. Hoy se puede: ver actividades, registrarse e
 iniciar sesión, y (como admin) listar/crear/editar/borrar usuarios desde
-`/admin/users`.
+`/admin/users`. Esto último ya está protegido de verdad con JWT — no
+alcanza con entrar a la URL, el backend rechaza la petición si no
+mandás un token válido de alguien con rol `Admin` (ver
+[stack.md](docs/architecture/stack.md#jwt-json-web-token)).
 
 Para probar la parte de administrador, el seed deja un usuario listo:
 
