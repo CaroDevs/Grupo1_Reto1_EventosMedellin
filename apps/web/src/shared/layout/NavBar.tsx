@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { clearSessionUser, useSessionUser } from '../auth/session';
-import { ADMIN_ROLE } from '../auth/roles';
+import { ADMIN_ROLE } from '@medellin-activities/shared-types';
 
 export function NavBar() {
   const user = useSessionUser();

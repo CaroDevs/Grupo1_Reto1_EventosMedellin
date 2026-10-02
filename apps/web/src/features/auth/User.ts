@@ -1,4 +1,4 @@
-import type { RoleName } from '../../shared/auth/roles';
+import type { RoleName } from '@medellin-activities/shared-types';
 
 export interface User {
   id: string;

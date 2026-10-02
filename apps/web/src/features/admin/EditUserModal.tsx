@@ -1,7 +1,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { apiPatch } from '../../shared/http/client';
 import type { User } from '../auth/User';
-import { ROLE_NAMES, type RoleName } from '../../shared/auth/roles';
+import { ROLE_NAMES, type RoleName } from '@medellin-activities/shared-types';
 
 export function EditUserModal({
   user,
