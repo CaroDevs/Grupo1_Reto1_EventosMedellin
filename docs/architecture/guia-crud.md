@@ -12,10 +12,12 @@ Antes de empezar, lee [stack.md](./stack.md) si no conoces NestJS, Prisma
 o React — ahí se explica qué es cada pieza. Esta guía asume que ya sabes
 qué es un controller, un service y un componente.
 
-> **Ojo con los conflictos de Git:** dos archivos los va a tocar todo el
-> equipo — `apps/api/prisma/schema.prisma` y `apps/api/src/app.module.ts`.
-> Haz commits chicos y seguido en esos dos archivos para minimizar
-> conflictos al hacer merge.
+> **Ojo con los conflictos de Git:** varios archivos los va a tocar todo
+> el equipo — `apps/api/prisma/schema.prisma`, `apps/api/src/app.module.ts`
+> y, del lado del frontend, `apps/web/src/App.tsx` y
+> `apps/web/src/shared/layout/NavBar.tsx` (si tu página va en el menú).
+> Haz commits chicos y seguido en esos archivos para minimizar conflictos
+> al hacer merge.
 
 ---
 
@@ -52,8 +54,10 @@ tus compañeros apliquen el mismo cambio al correr `npm run db:migrate`.
 ### 3. Crea la carpeta del módulo
 
 Dentro de `apps/api/src/modules/` ya existe una carpeta vacía para la
-mayoría de entidades planeadas (`identity`, `participation`, etc.) — usa
-la que te corresponda. Crea estos archivos:
+mayoría de entidades planeadas (`discovery`, `participation`, etc.) — usa
+la que te corresponda, o crea una nueva si no hay ninguna pensada para tu
+entidad (así se hizo con `auth`, que no estaba planeada originalmente).
+Crea estos archivos:
 
 ```
 apps/api/src/modules/category/
@@ -75,9 +79,15 @@ import { IsNotEmpty, IsString } from 'class-validator';
 export class CreateCategoryDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name!: string;
 }
 ```
+
+> El `!` después de `name` (no `name: string`) es necesario: con
+> `strict: true` TypeScript exige que toda propiedad se inicialice, pero
+> un DTO no tiene constructor — lo "llena" NestJS con los datos del
+> `POST`, no vos. El `!` le dice a TypeScript "confía, esto se inicializa
+> por otro lado". Sin él, da error `TS2564` apenas lo guardás.
 
 **`dto/update-category.dto.ts`** — reutiliza el DTO anterior pero hace
 todos los campos opcionales (para el `PATCH`, donde no siempre mandas
@@ -241,7 +251,7 @@ usando los helpers de
 [`shared/http/client.ts`](../../apps/web/src/shared/http/client.ts):
 
 ```tsx
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { apiDelete, apiGet, apiPost } from '../../shared/http/client';
 import type { Category } from './Category';
 
@@ -257,7 +267,7 @@ export function CategoriesPanel() {
     loadCategories();
   }, []);
 
-  async function handleCreate(event: FormEvent) {
+  async function handleCreate(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) return;
     await apiPost('/categories', { name });
@@ -290,14 +300,88 @@ export function CategoriesPanel() {
 }
 ```
 
-### 2. Móntalo en una ruta
+> Usamos `SubmitEvent`, no `FormEvent` — React 19 marcó `FormEvent` como
+> deprecado en sus tipos ("no existe de verdad"); `SubmitEvent` es el
+> reemplazo correcto para un `onSubmit`.
 
-Por ahora, mientras no haya un router configurado, puedes probarlo
-agregándolo temporalmente a
-[`App.tsx`](../../apps/web/src/App.tsx) junto a `ActivitiesList`. Cuando
-el equipo defina las rutas reales (carpetas en `apps/web/src/routes/`),
-cada feature se monta en su página correspondiente en vez de vivir todas
-en `App.tsx`.
+### 2. Crea la página de ruta y la conectas
+
+Ya hay router configurado ([React Router](./stack.md#react-router)), así
+que tu feature necesita una **página** que la monte, en
+`apps/web/src/routes/` (no en `features/` — ahí va la UI y la lógica,
+acá solo la "envuelve" para una URL):
+
+```
+apps/web/src/routes/public/CategoriesPage.tsx
+```
+
+```tsx
+import { CategoriesPanel } from '../../features/categories/CategoriesPanel';
+
+export function CategoriesPage() {
+  return (
+    <div className="container py-4">
+      <h1>Categorías</h1>
+      <CategoriesPanel />
+    </div>
+  );
+}
+```
+
+Después, agrégala a las rutas en
+[`App.tsx`](../../apps/web/src/App.tsx):
+
+```tsx
+import { CategoriesPage } from './routes/public/CategoriesPage';
+
+// dentro de <Routes>:
+<Route path="/categories" element={<CategoriesPage />} />
+```
+
+**¿Va en el menú de arriba?** Si querés que aparezca como link en el
+`NavBar`, edita
+[`shared/layout/NavBar.tsx`](../../apps/web/src/shared/layout/NavBar.tsx)
+y agregá un `<li>` más junto al de "Actividades":
+
+```tsx
+<li className="nav-item">
+  <Link className="nav-link" to="/categories">
+    Categorías
+  </Link>
+</li>
+```
+
+Si la página es **solo para administradores** (como el panel de
+usuarios), envolvé la ruta con `RequireAdmin` en vez de ponerla directo:
+
+```tsx
+import { RequireAdmin } from './shared/auth/RequireAdmin';
+
+<Route
+  path="/admin/categories"
+  element={
+    <RequireAdmin>
+      <CategoriesAdminPage />
+    </RequireAdmin>
+  }
+/>
+```
+
+Y en el `NavBar`, mostrá el link condicionalmente, igual que ya se hace
+con "Administrar usuarios":
+
+```tsx
+{user?.role.name === ADMIN_ROLE && (
+  <li className="nav-item">
+    <Link className="nav-link" to="/admin/categories">
+      Categorías
+    </Link>
+  </li>
+)}
+```
+
+(`ADMIN_ROLE` sale de `@medellin-activities/shared-types` — ver
+[stack.md](./stack.md#el-paquete-shared-types) si no sabes qué es eso.)
 
 ### 3. Pruébalo en el navegador
 
@@ -316,7 +400,19 @@ y borrar categorías desde la UI.
 | Backend | `dto/*.dto.ts` | Valida lo que entra por `POST`/`PATCH` |
 | Frontend | `features/<entidad>/<Entidad>.ts` | Tipo que refleja el modelo |
 | Frontend | `features/<entidad>/*.tsx` | UI + llamadas a la API |
+| Frontend | `routes/<área>/<Entidad>Page.tsx` | Página que monta la feature en una URL |
+| Compartido | `packages/shared-types` | Valores/tipos que deben ser *idénticos* en los dos lados (ver [stack.md](./stack.md#el-paquete-shared-types)) |
 
-Si algo no queda claro, revisa el módulo `catalog` (backend) y la feature
-`activities` (frontend) — son el ejemplo real más simple que ya funciona
-en el repo (aunque solo con lectura, sin crear/editar/borrar todavía).
+**Ejemplos reales en el repo, según qué estés buscando:**
+
+- **Lo más simple posible (solo lectura):** módulo `catalog` (backend) +
+  feature `activities` (frontend) — sin crear/editar/borrar, el punto de
+  partida más chico.
+- **CRUD completo con relaciones:** módulo `user` (backend) — tiene
+  `create`/`findAll`/`findOne`/`update`/`remove`, maneja una relación
+  (`roleId` → `Role`) y valida contra `packages/shared-types`.
+- **UI completa con modales:** feature `admin` (frontend,
+  `UsersAdminPanel.tsx` + `CreateUserModal.tsx` + `EditUserModal.tsx` +
+  `ConfirmDeleteModal.tsx`) — si tu CRUD necesita crear/editar/borrar con
+  confirmación en vez de la lista simple de esta guía, mejor copiar ese
+  patrón que el de `CategoriesPanel` de arriba.
