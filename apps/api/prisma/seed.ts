@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import * as bcrypt from 'bcrypt';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 
@@ -7,8 +8,23 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   await prisma.role.createMany({
-    data: [{ name: 'admin' }, { name: 'organizer' }, { name: 'user' }],
+    data: [{ name: 'Admin' }, { name: 'Organizer' }, { name: 'User' }],
     skipDuplicates: true,
+  });
+
+  const adminRole = await prisma.role.findUniqueOrThrow({
+    where: { name: 'Admin' },
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'admin@itm.com' },
+    update: {},
+    create: {
+      name: 'Administrador',
+      email: 'admin@itm.com',
+      password: await bcrypt.hash('12345678', 10),
+      roleId: adminRole.id,
+    },
   });
 
   await prisma.activity.createMany({
