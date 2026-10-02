@@ -110,13 +110,17 @@ JWT.
 3. En el backend, un endpoint protegido usa
    [`JwtAuthGuard`](../../apps/api/src/common/auth/jwt-auth.guard.ts): lee
    ese header, verifica la firma con el mismo secreto que la generó
-   (`JWT_SECRET` en `.env`), y si es válida deja pasar la petición — si
-   no, responde `401`.
+   (`JWT_SECRET` en `.env`) y, si es válida, **vuelve a consultar la base
+   de datos** para saber el rol *actual* de ese usuario — no confía en el
+   rol que venía dentro del token, que pudo quedar desactualizado si a
+   esa persona le cambiaron el rol (o la borraron) después de que inició
+   sesión. Si el token no es válido o el usuario ya no existe, responde
+   `401`.
 4. Si además el endpoint necesita un rol específico,
    [`RolesGuard`](../../apps/api/src/common/auth/roles.guard.ts) +
-   el decorador `@Roles('Admin')` comparan el rol que venía *dentro* del
-   token (no uno que mande el cliente aparte, que se podría falsificar)
-   contra lo que el endpoint exige — si no coincide, responde `403`.
+   el decorador `@Roles('Admin')` comparan ese rol (ya actualizado por
+   `JwtAuthGuard` en el paso anterior) contra lo que el endpoint exige —
+   si no coincide, responde `403`.
 5. Si el backend responde `401` (token vencido o inválido),
    `client.ts` borra la sesión local sola — así el frontend nunca se
    queda "logueado" en pantalla con un token que el backend ya no
