@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { clearSessionUser, useSessionUser } from '../auth/session';
+import { ADMIN_ROLE } from '../auth/roles';
 
 export function NavBar() {
   const user = useSessionUser();
@@ -7,7 +8,7 @@ export function NavBar() {
 
   function handleLogout() {
     clearSessionUser();
-    navigate('/activities');
+    void navigate('/activities');
   }
 
   return (
@@ -36,7 +37,7 @@ export function NavBar() {
                 Actividades
               </Link>
             </li>
-            {user?.role.name === 'Admin' && (
+            {user?.role.name === ADMIN_ROLE && (
               <li className="nav-item">
                 <Link className="nav-link" to="/admin/users">
                   Administrar usuarios

@@ -2,6 +2,7 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import * as bcrypt from 'bcrypt';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import { DEFAULT_ROLE } from '../../common/roles';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -11,11 +12,11 @@ export class UserService {
 
   async create(dto: CreateUserDto) {
     const role = await this.prisma.role.findUnique({
-      where: { name: 'User' },
+      where: { name: DEFAULT_ROLE },
     });
 
     if (!role) {
-      throw new NotFoundException('El rol "User" no existe. ¿Corriste el seed?');
+      throw new NotFoundException(`El rol "${DEFAULT_ROLE}" no existe. ¿Corriste el seed?`);
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);

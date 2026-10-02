@@ -1,8 +1,7 @@
 import { useState, type SubmitEvent } from 'react';
 import { apiPatch } from '../../shared/http/client';
 import type { User } from '../auth/User';
-
-const ROLES = ['User', 'Organizer', 'Admin'];
+import { ROLE_NAMES, type RoleName } from '../../shared/auth/roles';
 
 export function EditUserModal({
   user,
@@ -15,7 +14,7 @@ export function EditUserModal({
 }) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  const [role, setRole] = useState(user.role.name);
+  const [role, setRole] = useState<RoleName>(user.role.name);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -83,9 +82,9 @@ export function EditUserModal({
                     id="edit-role"
                     className="form-select"
                     value={role}
-                    onChange={(e) => setRole(e.target.value)}
+                    onChange={(e) => setRole(e.target.value as RoleName)}
                   >
-                    {ROLES.map((roleOption) => (
+                    {ROLE_NAMES.map((roleOption) => (
                       <option key={roleOption} value={roleOption}>
                         {roleOption}
                       </option>
