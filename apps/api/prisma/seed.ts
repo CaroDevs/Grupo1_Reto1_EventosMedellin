@@ -2,7 +2,7 @@ import 'dotenv/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
-import { ADMIN_ROLE, ROLE_NAMES } from '../src/common/roles';
+import { ADMIN_ROLE, ROLE_NAMES } from '@medellin-activities/shared-types';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
