@@ -1,15 +1,16 @@
 import { useState, type SubmitEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { apiPost } from '../../shared/http/client';
 import { saveSessionUser } from '../../shared/auth/session';
 import type { User } from './User';
 
 export function RegisterForm() {
+  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [registeredUser, setRegisteredUser] = useState<User | null>(null);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -19,7 +20,7 @@ export function RegisterForm() {
     try {
       const user = await apiPost<User>('/users', { name, email, password });
       saveSessionUser(user);
-      setRegisteredUser(user);
+      void navigate('/activities');
     } catch (err) {
       setError(
         err instanceof Error && err.message.includes('409')
@@ -31,51 +32,67 @@ export function RegisterForm() {
     }
   }
 
-  if (registeredUser) {
-    return <p>¡Cuenta creada! Bienvenido, {registeredUser.name}.</p>;
-  }
-
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Crear cuenta</h2>
+    <form onSubmit={handleSubmit} className="mx-auto" style={{ maxWidth: '24rem' }}>
+      <h2 className="mb-3">Crear cuenta</h2>
 
-      <label>
-        <span>Nombre</span>
+      <div className="mb-3">
+        <label className="form-label" htmlFor="register-name">
+          Nombre
+        </label>
         <input
+          id="register-name"
           type="text"
+          className="form-control"
           value={name}
           onChange={(e) => setName(e.target.value)}
           minLength={3}
           required
         />
-      </label>
+      </div>
 
-      <label>
-        <span>Email</span>
+      <div className="mb-3">
+        <label className="form-label" htmlFor="register-email">
+          Email
+        </label>
         <input
+          id="register-email"
           type="email"
+          className="form-control"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-      </label>
+      </div>
 
-      <label>
-        <span>Contraseña</span>
+      <div className="mb-3">
+        <label className="form-label" htmlFor="register-password">
+          Contraseña
+        </label>
         <input
+          id="register-password"
           type="password"
+          className="form-control"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           minLength={8}
           required
         />
-      </label>
+      </div>
 
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
 
-      <button type="submit" disabled={loading}>
+      <button type="submit" className="btn btn-primary w-100" disabled={loading}>
         {loading ? 'Creando cuenta...' : 'Registrarme'}
       </button>
+
+      <p className="mt-3 text-center">
+        ¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link>
+      </p>
     </form>
   );
 }

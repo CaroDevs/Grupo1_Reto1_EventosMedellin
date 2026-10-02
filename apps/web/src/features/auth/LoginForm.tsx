@@ -1,14 +1,15 @@
 import { useState, type SubmitEvent } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { apiPost } from '../../shared/http/client';
 import { saveSessionUser } from '../../shared/auth/session';
 import type { User } from './User';
 
 export function LoginForm() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -18,7 +19,7 @@ export function LoginForm() {
     try {
       const user = await apiPost<User>('/auth/login', { email, password });
       saveSessionUser(user);
-      setLoggedInUser(user);
+      void navigate('/activities');
     } catch {
       setError('Email o contraseña incorrectos.');
     } finally {
@@ -26,39 +27,51 @@ export function LoginForm() {
     }
   }
 
-  if (loggedInUser) {
-    return <p>Sesión iniciada como {loggedInUser.name} ({loggedInUser.role.name}).</p>;
-  }
-
   return (
-    <form onSubmit={handleSubmit}>
-      <h2>Iniciar sesión</h2>
+    <form onSubmit={handleSubmit} className="mx-auto" style={{ maxWidth: '24rem' }}>
+      <h2 className="mb-3">Iniciar sesión</h2>
 
-      <label>
-        <span>Email</span>
+      <div className="mb-3">
+        <label className="form-label" htmlFor="login-email">
+          Email
+        </label>
         <input
+          id="login-email"
           type="email"
+          className="form-control"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
-      </label>
+      </div>
 
-      <label>
-        <span>Contraseña</span>
+      <div className="mb-3">
+        <label className="form-label" htmlFor="login-password">
+          Contraseña
+        </label>
         <input
+          id="login-password"
           type="password"
+          className="form-control"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-      </label>
+      </div>
 
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <div className="alert alert-danger" role="alert">
+          {error}
+        </div>
+      )}
 
-      <button type="submit" disabled={loading}>
+      <button type="submit" className="btn btn-primary w-100" disabled={loading}>
         {loading ? 'Ingresando...' : 'Ingresar'}
       </button>
+
+      <p className="mt-3 text-center">
+        ¿No tienes cuenta? <Link to="/register">Crear una</Link>
+      </p>
     </form>
   );
 }
