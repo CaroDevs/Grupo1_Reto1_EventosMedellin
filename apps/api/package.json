@@ -10,7 +10,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "tsx prisma/seed.ts",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --watch"
   },
   "dependencies": {
     "@medellin-activities/shared-types": "*",
@@ -31,15 +33,28 @@
   },
   "devDependencies": {
     "@nestjs/cli": "^12.0.8",
+    "@nestjs/testing": "^12.1.2",
     "@types/bcrypt": "^6.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.6.3",
     "@types/pg": "^8.23.1",
     "dotenv": "^18.0.5",
+    "jest": "^30.5.2",
     "prisma": "^7.10.0",
+    "ts-jest": "^29.4.14",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "jest": {
+    "extensionsToTreatAsEsm": [".ts"],
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "testRegex": "src/.*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": ["ts-jest", { "tsconfig": "tsconfig.spec.json", "useESM": true }]
+    },
+    "testEnvironment": "node"
   }
 }
