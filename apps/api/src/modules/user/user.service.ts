@@ -75,12 +75,28 @@ export class UserService {
   }
 
   async update(id: string, dto: UpdateUserDto) {
+    const { role, password, ...rest } = dto;
+    let roleId: string | undefined;
+
+    if (role) {
+      const roleRecord = await this.prisma.role.findUnique({ where: { name: role } });
+      if (!roleRecord) {
+        throw new NotFoundException(`El rol "${role}" no existe`);
+      }
+      roleId = roleRecord.id;
+    }
+
     const user = await this.prisma.user.update({
       where: { id },
-      data: dto,
+      data: {
+        ...rest,
+        ...(password && { password: await bcrypt.hash(password, 10) }),
+        ...(roleId && { roleId }),
+      },
+      include: { role: { select: { name: true } } },
     });
 
-    const { password, ...safeUser } = user;
+    const { password: _hash, ...safeUser } = user;
     return safeUser;
   }
 
