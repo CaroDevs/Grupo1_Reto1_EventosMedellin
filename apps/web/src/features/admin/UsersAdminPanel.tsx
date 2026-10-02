@@ -75,14 +75,14 @@ export function UsersAdminPanel() {
                     className="btn btn-sm btn-outline-primary me-2"
                     onClick={() => setEditingUser(user)}
                   >
-                    Editar
+                    <i className="fa-solid fa-pen" /> Editar
                   </button>
                   <button
                     type="button"
                     className="btn btn-sm btn-outline-danger"
                     onClick={() => handleDelete(user.id, user.name)}
                   >
-                    Borrar
+                    <i className="fa-solid fa-trash" /> Borrar
                   </button>
                 </td>
               </tr>
