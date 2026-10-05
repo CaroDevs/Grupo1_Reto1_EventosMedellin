@@ -8,7 +8,7 @@ Usa como ejemplo una entidad inventada, **`Category`** (categoría de
 actividad). **Reemplaza "Category"/"category" por el nombre real de tu
 entidad** en todos los pasos (ej. `Participation`, `Organizer`...).
 
-Antes de empezar, lee [stack.md](./stack.md) si no conoces NestJS, Prisma
+Antes de empezar, debes de leer [stack.md](./stack.md) si no conoces NestJS, Prisma
 o React — ahí se explica qué es cada pieza. Esta guía asume que ya sabes
 qué es un controller, un service y un componente.
 
