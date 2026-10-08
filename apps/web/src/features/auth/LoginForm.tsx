@@ -2,6 +2,7 @@ import { useState, type SubmitEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { apiPost } from '../../shared/http/client';
 import { saveSession } from '../../shared/auth/session';
+import { GoogleLoginButton } from './GoogleLoginButton';
 import type { User } from './User';
 
 interface LoginResponse {
@@ -76,6 +77,16 @@ export function LoginForm() {
       <button type="submit" className="btn btn-primary w-100" disabled={loading}>
         {loading ? 'Ingresando...' : 'Ingresar'}
       </button>
+
+      <div className="d-flex align-items-center my-3">
+        <hr className="flex-grow-1" />
+        <span className="mx-2 text-muted">o</span>
+        <hr className="flex-grow-1" />
+      </div>
+
+      <div className="d-flex justify-content-center">
+        <GoogleLoginButton onError={setError} />
+      </div>
 
       <p className="mt-3 text-center">
         ¿No tienes cuenta? <Link to="/register">Crear una</Link>
