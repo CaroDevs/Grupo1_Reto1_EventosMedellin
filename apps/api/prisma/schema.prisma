@@ -36,3 +36,12 @@ model Role {
 
   @@map("roles")
 }
+
+model Category{
+  id String   @id @default(uuid())
+  name String
+  description String
+  createdAt DateTime @default(now())
+  @@map("categories")
+  
+}
