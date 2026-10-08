@@ -38,13 +38,20 @@ export function NavBar() {
               </Link>
             </li>
             {user?.role.name === ADMIN_ROLE && (
-              <li className="nav-item">
-                <Link className="nav-link" to="/admin/users">
-                  Administrar usuarios
-                </Link>
-              </li>
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/admin/users">
+                    Administrar usuarios
+                  </Link>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/admin/categories">
+                    Categorías
+                  </Link>
+                </li>
+              </>
             )}
-          </ul>
+          </ul> 
 
           <ul className="navbar-nav">
             <li className="nav-item dropdown">
