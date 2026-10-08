@@ -170,11 +170,10 @@ con email/contraseña en esa cuenta ahora falla con el mismo mensaje
 genérico que cualquier otro intento fallido (no revela que esa cuenta
 "solo entra por Google").
 
-**No usamos un patrón `Factory`/`Strategy` formal para esto** aunque ya
-hay dos formas de crear un usuario (registro normal y por Google) —
-con solo dos casos, cada uno de pocas líneas, la abstracción no paga
-todavía. Si aparece una tercera forma (ej. otro proveedor OAuth,
-importación masiva), ahí sí valdría la pena extraerlo.
+**Cómo se crea un usuario de verdad, sea cual sea el camino:** ver la
+sección ["El patrón Factory Method"](#el-patrón-factory-method-creación-de-usuarios)
+más abajo — con Google fue el momento en que dejó de alcanzar con
+código suelto en cada lugar.
 
 **Para configurarlo en tu máquina:** necesitás un Client ID propio de
 [Google Cloud Console](https://console.cloud.google.com/) (pantalla de
@@ -184,6 +183,61 @@ consentimiento OAuth + credencial "OAuth 2.0 Client ID"), puesto en
 da Google **no se usa en ningún lado** de este flujo. Mientras el
 proyecto esté en "modo de prueba" en Google Cloud Console, solo entran
 las cuentas que agregues explícitamente como "usuarios de prueba".
+
+### El patrón Factory Method (creación de usuarios)
+
+**Qué es:** en vez de que cada lugar del código que crea un usuario
+repita "buscar el rol, hashear la contraseña si hay, insertar en la
+base de datos", esa lógica se separa en dos piezas: una **estrategia**
+por cada forma de crear un usuario (sabe armar los datos para *su*
+caso), y una **fábrica** única que recibe cualquier estrategia y hace
+el `insert` real. Es el patrón creacional `Factory Method` — delegar la
+decisión de *cómo* construir algo a una subclase/estrategia, mientras
+el código que usa el resultado no necesita saber cuál se usó.
+
+**Por qué recién ahora:** antes había solo dos formas de crear un
+usuario (registro normal y Google) — con dos casos cortos, la
+abstracción no pagaba. Agregar una tercera (un admin creando un usuario
+desde el panel, **eligiendo el rol directo** — algo que el registro
+público nunca debería poder hacer) fue el punto donde repetir la misma
+lógica tres veces empezaba a doler más que extraerla.
+
+**Las piezas, todas en `apps/api/src/common/users/`:**
+
+| Archivo | Qué hace |
+|---|---|
+| [`user-creation-strategy.ts`](../../apps/api/src/common/users/user-creation-strategy.ts) | La interfaz: `buildUserData(input)` → `{ name, email, password, roleId }` ya resueltos |
+| [`registration.strategy.ts`](../../apps/api/src/common/users/registration.strategy.ts) | Registro público — hashea la contraseña, siempre rol `User` |
+| [`google-oauth.strategy.ts`](../../apps/api/src/common/users/google-oauth.strategy.ts) | Login con Google — sin contraseña (`null`), siempre rol `User` |
+| [`admin-creation.strategy.ts`](../../apps/api/src/common/users/admin-creation.strategy.ts) | Un admin crea el usuario — hashea la contraseña, usa el rol que el admin eligió |
+| [`user.factory.ts`](../../apps/api/src/common/users/user.factory.ts) | La fábrica: le pide los datos a la estrategia que le pasen y hace `prisma.user.create(...)` — ni sabe ni le importa cuál estrategia fue |
+| [`user-factory.module.ts`](../../apps/api/src/common/users/user-factory.module.ts) | Módulo de Nest que expone estas piezas — lo importan `UserModule` y `AuthModule` |
+
+**Cómo se usa, en la práctica:**
+
+```ts
+// UserService.create() — registro público
+return this.userFactory.create(this.registrationStrategy, dto);
+
+// UserService.createByAdmin() — POST /users/admin, protegido con
+// JwtAuthGuard + RolesGuard(Admin)
+return this.userFactory.create(this.adminCreationStrategy, dto);
+
+// AuthService.loginWithGoogle() — solo si el usuario no existía
+await this.userFactory.create(this.googleOAuthStrategy, { email, name });
+```
+
+**Por qué es seguro que `AdminCreationStrategy` sí deje elegir el rol,**
+cuando a propósito el registro público no puede: porque el único lugar
+que la usa (`POST /users/admin`) ya está protegido —
+`@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles('Admin')` — nadie
+llega ahí sin ser admin primero. La estrategia en sí no valida permisos,
+confía en que el controller que la llama ya lo hizo.
+
+**Si agregan una cuarta forma** (otro proveedor OAuth, importación
+masiva por CSV...): crean una estrategia nueva implementando
+`UserCreationStrategy`, la agregan a `UserFactoryModule`, y la inyectan
+donde haga falta — `UserFactory` no cambia ni se entera.
 
 ## Frontend (`apps/web`)
 
