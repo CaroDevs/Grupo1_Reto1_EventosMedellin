@@ -1,11 +1,13 @@
 import { describe, expect, it, jest, afterEach } from '@jest/globals';
-import { NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../../database/prisma.service';
+import { UserFactory } from '../../common/users/user.factory';
+import { GoogleOAuthStrategy } from '../../common/users/google-oauth.strategy';
 
 const config = { get: jest.fn().mockReturnValue('fake-client-id') } as unknown as ConfigService;
 
@@ -27,7 +29,10 @@ describe('AuthService', () => {
       signAsync: jest.fn().mockResolvedValue('token-firmado'),
     } as unknown as JwtService;
 
-    return new AuthService(prisma, jwtService, config);
+    const userFactory = { create: jest.fn() } as unknown as UserFactory;
+    const googleOAuthStrategy = {} as GoogleOAuthStrategy;
+
+    return new AuthService(prisma, jwtService, config, userFactory, googleOAuthStrategy);
   }
 
   describe('login', () => {
@@ -56,7 +61,8 @@ describe('AuthService', () => {
         user: { findUnique: jest.fn().mockResolvedValue(null) },
       } as unknown as PrismaService;
       const jwtService = { signAsync: jest.fn() } as unknown as JwtService;
-      const service = new AuthService(prisma, jwtService, config);
+      const userFactory = { create: jest.fn() } as unknown as UserFactory;
+      const service = new AuthService(prisma, jwtService, config, userFactory, {} as GoogleOAuthStrategy);
 
       await expect(
         service.login({ email: 'no-existe@example.com', password: 'lo-que-sea' }),
@@ -78,7 +84,7 @@ describe('AuthService', () => {
       jest.restoreAllMocks();
     });
 
-    it('loguea a un usuario ya existente sin crear uno nuevo', async () => {
+    it('loguea a un usuario ya existente sin pasar por UserFactory', async () => {
       jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
         getPayload: () => ({ email: 'alguien@example.com', name: 'Alguien' }),
       } as never);
@@ -92,48 +98,45 @@ describe('AuthService', () => {
             password: null,
             role: { name: 'User' },
           }),
-          create: jest.fn(),
         },
-        role: { findUnique: jest.fn() },
       } as unknown as PrismaService;
       const jwtService = { signAsync: jest.fn().mockResolvedValue('token-firmado') } as unknown as JwtService;
-      const service = new AuthService(prisma, jwtService, config);
+      const userFactory = { create: jest.fn() } as unknown as UserFactory;
+      const service = new AuthService(prisma, jwtService, config, userFactory, {} as GoogleOAuthStrategy);
 
       const result = await service.loginWithGoogle({ idToken: 'token-de-google' });
 
       expect(result.accessToken).toBe('token-firmado');
       expect(result.user).not.toHaveProperty('password');
-      expect(prisma.user.create).not.toHaveBeenCalled();
+      expect(userFactory.create).not.toHaveBeenCalled();
     });
 
-    it('crea el usuario (con password null) si es la primera vez que entra', async () => {
+    it('si es la primera vez, delega en UserFactory con GoogleOAuthStrategy', async () => {
       jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
         getPayload: () => ({ email: 'nuevo@example.com', name: 'Nuevo' }),
       } as never);
 
       const prisma = {
-        user: {
-          findUnique: jest.fn().mockResolvedValue(null),
-          create: jest.fn().mockResolvedValue({
-            id: 'user-2',
-            name: 'Nuevo',
-            email: 'nuevo@example.com',
-            password: null,
-            role: { name: 'User' },
-          }),
-        },
-        role: { findUnique: jest.fn().mockResolvedValue({ id: 'role-user', name: 'User' }) },
+        user: { findUnique: jest.fn().mockResolvedValue(null) },
       } as unknown as PrismaService;
       const jwtService = { signAsync: jest.fn().mockResolvedValue('token-firmado') } as unknown as JwtService;
-      const service = new AuthService(prisma, jwtService, config);
+      const googleOAuthStrategy = {} as GoogleOAuthStrategy;
+      const userFactory = {
+        create: jest.fn().mockResolvedValue({
+          id: 'user-2',
+          name: 'Nuevo',
+          email: 'nuevo@example.com',
+          role: { name: 'User' },
+        }),
+      } as unknown as UserFactory;
+      const service = new AuthService(prisma, jwtService, config, userFactory, googleOAuthStrategy);
 
       await service.loginWithGoogle({ idToken: 'token-de-google' });
 
-      const createCall = (prisma.user.create as jest.Mock).mock.calls[0][0] as {
-        data: Record<string, unknown>;
-      };
-      expect(createCall.data.password).toBeUndefined();
-      expect(createCall.data.email).toBe('nuevo@example.com');
+      expect(userFactory.create).toHaveBeenCalledWith(googleOAuthStrategy, {
+        email: 'nuevo@example.com',
+        name: 'Nuevo',
+      });
     });
 
     it('rechaza si el token de Google no es válido', async () => {
@@ -141,27 +144,11 @@ describe('AuthService', () => {
 
       const prisma = { user: { findUnique: jest.fn() } } as unknown as PrismaService;
       const jwtService = { signAsync: jest.fn() } as unknown as JwtService;
-      const service = new AuthService(prisma, jwtService, config);
+      const userFactory = { create: jest.fn() } as unknown as UserFactory;
+      const service = new AuthService(prisma, jwtService, config, userFactory, {} as GoogleOAuthStrategy);
 
       await expect(service.loginWithGoogle({ idToken: 'token-roto' })).rejects.toThrow(
         UnauthorizedException,
-      );
-    });
-
-    it('tira NotFoundException si el rol User no existe (falta correr el seed)', async () => {
-      jest.spyOn(OAuth2Client.prototype, 'verifyIdToken').mockResolvedValue({
-        getPayload: () => ({ email: 'nuevo@example.com', name: 'Nuevo' }),
-      } as never);
-
-      const prisma = {
-        user: { findUnique: jest.fn().mockResolvedValue(null) },
-        role: { findUnique: jest.fn().mockResolvedValue(null) },
-      } as unknown as PrismaService;
-      const jwtService = { signAsync: jest.fn() } as unknown as JwtService;
-      const service = new AuthService(prisma, jwtService, config);
-
-      await expect(service.loginWithGoogle({ idToken: 'token-de-google' })).rejects.toThrow(
-        NotFoundException,
       );
     });
   });

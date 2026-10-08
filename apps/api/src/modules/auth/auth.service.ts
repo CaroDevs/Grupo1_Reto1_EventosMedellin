@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
-import { DEFAULT_ROLE } from '@medellin-activities/shared-types';
 import { PrismaService } from '../../database/prisma.service';
+import { UserFactory } from '../../common/users/user.factory';
+import { GoogleOAuthStrategy } from '../../common/users/google-oauth.strategy';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 
@@ -17,6 +18,8 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly userFactory: UserFactory,
+    private readonly googleOAuthStrategy: GoogleOAuthStrategy,
   ) {
     this.googleClientId = this.config.get<string>('GOOGLE_CLIENT_ID');
     this.googleClient = new OAuth2Client(this.googleClientId);
@@ -67,32 +70,30 @@ export class AuthService {
 
     const email = payload.email;
 
-    let user = await this.prisma.user.findUnique({
+    const existingUser = await this.prisma.user.findUnique({
       where: { email },
       include: { role: { select: { name: true } } },
     });
 
-    if (!user) {
-      const role = await this.prisma.role.findUnique({ where: { name: DEFAULT_ROLE } });
-      if (!role) {
-        throw new NotFoundException(`El rol "${DEFAULT_ROLE}" no existe. ¿Corriste el seed?`);
-      }
-
-      user = await this.prisma.user.create({
-        data: {
-          name: payload.name ?? email,
-          email,
-          roleId: role.id,
-          // password queda null — esta cuenta solo entra por Google.
-        },
-        include: { role: { select: { name: true } } },
+    // Si ya existe, solo quitamos el password de la respuesta. Si es la
+    // primera vez, UserFactory + GoogleOAuthStrategy arman el usuario
+    // nuevo (sin password, rol User) — es la misma pieza que usa el
+    // registro normal y la creación desde el panel de admin, solo
+    // cambia la estrategia.
+    let safeUser;
+    if (existingUser) {
+      const { password, ...rest } = existingUser;
+      safeUser = rest;
+    } else {
+      safeUser = await this.userFactory.create(this.googleOAuthStrategy, {
+        email,
+        name: payload.name,
       });
     }
 
-    const { password, ...safeUser } = user;
     const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
-      role: user.role.name,
+      sub: safeUser.id,
+      role: safeUser.role.name,
     });
 
     return { user: safeUser, accessToken };
