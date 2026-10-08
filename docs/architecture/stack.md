@@ -154,10 +154,25 @@ frontend que, al tocarlo, le da directo al navegador un token firmado
    este paso, es directo entre el navegador y Google.
 2. El frontend manda ese `idToken` a `POST /auth/google`.
 3. [`auth.service.ts`](../../apps/api/src/modules/auth/auth.service.ts)
-   lo verifica con `google-auth-library` (confirma que lo firmó Google
-   de verdad, y que es para *nuestra* app — por eso hace falta el
+   le pasa el `idToken` a
+   [`GoogleTokenVerifier`](../../apps/api/src/common/auth/google-token-verifier.ts),
+   que es quien de verdad usa `google-auth-library` para confirmar que
+   lo firmó Google (y que es para *nuestra* app — por eso hace falta el
    `GOOGLE_CLIENT_ID` también en el backend). Si es válido, saca el
    email y nombre ya verificados del payload.
+
+   `AuthService` no conoce `google-auth-library` ni crea su cliente —
+   solo conoce la interfaz `GoogleTokenVerifier` (un método: `verify`).
+   El enlace entre esa interfaz y `GoogleTokenVerifierImpl` (la que sí
+   usa la librería) se hace en `auth.module.ts` con un *injection
+   token* (`GOOGLE_TOKEN_VERIFIER`) — en TypeScript no se puede inyectar
+   por interfaz directamente (se borran al compilar), así que un
+   `Symbol` hace ese papel. Esto es Inversión de Dependencias (la "D"
+   de SOLID): si mañana cambia cómo se verifica el token (otra librería,
+   otro proveedor de login), solo se cambia `GoogleTokenVerifierImpl` —
+   `AuthService` ni se entera. También simplifica los tests: antes había
+   que interceptar el `OAuth2Client` real con `jest.spyOn`; ahora
+   `auth.service.spec.ts` simplemente pasa un objeto `{ verify: jest.fn() }`.
 4. Busca un `User` con ese email. Si existe, lo loguea. Si no existe,
    **lo crea** — con `password` en `null`, porque nunca escribió una.
 5. Devuelve `{ user, accessToken }`, exactamente la misma forma que el
