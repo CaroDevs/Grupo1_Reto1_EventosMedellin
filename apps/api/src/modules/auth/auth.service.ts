@@ -1,29 +1,26 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
-import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../../database/prisma.service';
 import { UserFactory } from '../../common/users/user.factory';
 import { GoogleOAuthStrategy } from '../../common/users/google-oauth.strategy';
+import {
+  GOOGLE_TOKEN_VERIFIER,
+  type GoogleTokenVerifier,
+} from '../../common/auth/google-token-verifier';
 import { LoginDto } from './dto/login.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
 
 @Injectable()
 export class AuthService {
-  private readonly googleClient: OAuth2Client;
-  private readonly googleClientId: string | undefined;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
     private readonly userFactory: UserFactory,
     private readonly googleOAuthStrategy: GoogleOAuthStrategy,
-  ) {
-    this.googleClientId = this.config.get<string>('GOOGLE_CLIENT_ID');
-    this.googleClient = new OAuth2Client(this.googleClientId);
-  }
+    @Inject(GOOGLE_TOKEN_VERIFIER)
+    private readonly googleTokenVerifier: GoogleTokenVerifier,
+  ) {}
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
@@ -55,11 +52,7 @@ export class AuthService {
     let payload: { email?: string; name?: string } | undefined;
 
     try {
-      const ticket = await this.googleClient.verifyIdToken({
-        idToken: dto.idToken,
-        audience: this.googleClientId,
-      });
-      payload = ticket.getPayload();
+      payload = await this.googleTokenVerifier.verify(dto.idToken);
     } catch {
       throw new UnauthorizedException('Token de Google inválido');
     }

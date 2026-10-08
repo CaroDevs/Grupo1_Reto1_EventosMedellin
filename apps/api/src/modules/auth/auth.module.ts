@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UserFactoryModule } from '../../common/users/user-factory.module';
+import {
+  GOOGLE_TOKEN_VERIFIER,
+  GoogleTokenVerifierImpl,
+} from '../../common/auth/google-token-verifier';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 
@@ -21,7 +25,10 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [
+    AuthService,
+    { provide: GOOGLE_TOKEN_VERIFIER, useClass: GoogleTokenVerifierImpl },
+  ],
   exports: [JwtModule],
 })
 export class AuthModule {}
