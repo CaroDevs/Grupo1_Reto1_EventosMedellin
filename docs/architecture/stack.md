@@ -130,6 +130,61 @@ JWT.
 ["Proteger una ruta nueva"](./guia-crud.md#proteger-una-ruta-nueva) de
 la guía de CRUD.
 
+### Login con Google (OAuth)
+
+**Qué es:** en vez de que la persona escriba un email y contraseña
+propios de esta app, "Iniciar sesión con Google" deja que Google
+confirme quién es, y nuestro backend confía en esa confirmación.
+
+**Por qué este enfoque en particular:** hay dos formas típicas de hacer
+"login con Google". La clásica usa *redirects* (tu app manda al
+navegador a una URL de Google, Google te devuelve a otra URL tuya con un
+código) — pensada para apps que renderiza el servidor. Como somos una
+SPA, usamos **Google Identity Services**: Google pone un botón en el
+frontend que, al tocarlo, le da directo al navegador un token firmado
+(el `idToken`) — sin que el backend tenga que manejar ningún redirect.
+
+**Cómo funciona acá, de punta a punta:**
+
+1. [`GoogleLoginButton.tsx`](../../apps/web/src/features/auth/GoogleLoginButton.tsx)
+   renderiza el botón de Google (vía
+   [`@react-oauth/google`](https://www.npmjs.com/package/@react-oauth/google),
+   que envuelve a Google Identity Services). Al tener éxito, Google le da
+   un `credential` (el `idToken`) — nunca pasa por nuestro backend en
+   este paso, es directo entre el navegador y Google.
+2. El frontend manda ese `idToken` a `POST /auth/google`.
+3. [`auth.service.ts`](../../apps/api/src/modules/auth/auth.service.ts)
+   lo verifica con `google-auth-library` (confirma que lo firmó Google
+   de verdad, y que es para *nuestra* app — por eso hace falta el
+   `GOOGLE_CLIENT_ID` también en el backend). Si es válido, saca el
+   email y nombre ya verificados del payload.
+4. Busca un `User` con ese email. Si existe, lo loguea. Si no existe,
+   **lo crea** — con `password` en `null`, porque nunca escribió una.
+5. Devuelve `{ user, accessToken }`, exactamente la misma forma que el
+   login normal — el frontend no necesita saber si alguien entró con
+   contraseña o con Google, lo trata igual de ahí en adelante.
+
+**Por qué `password` es opcional en el modelo `User`:** antes era
+obligatorio. Una cuenta creada por Google no tiene — intentar loguearse
+con email/contraseña en esa cuenta ahora falla con el mismo mensaje
+genérico que cualquier otro intento fallido (no revela que esa cuenta
+"solo entra por Google").
+
+**No usamos un patrón `Factory`/`Strategy` formal para esto** aunque ya
+hay dos formas de crear un usuario (registro normal y por Google) —
+con solo dos casos, cada uno de pocas líneas, la abstracción no paga
+todavía. Si aparece una tercera forma (ej. otro proveedor OAuth,
+importación masiva), ahí sí valdría la pena extraerlo.
+
+**Para configurarlo en tu máquina:** necesitás un Client ID propio de
+[Google Cloud Console](https://console.cloud.google.com/) (pantalla de
+consentimiento OAuth + credencial "OAuth 2.0 Client ID"), puesto en
+`GOOGLE_CLIENT_ID` (`apps/api/.env`) y `VITE_GOOGLE_CLIENT_ID`
+(`apps/web/.env`) — el mismo valor en los dos. El Client Secret que te
+da Google **no se usa en ningún lado** de este flujo. Mientras el
+proyecto esté en "modo de prueba" en Google Cloud Console, solo entran
+las cuentas que agregues explícitamente como "usuarios de prueba".
+
 ## Frontend (`apps/web`)
 
 ### React
