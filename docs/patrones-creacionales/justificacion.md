@@ -1,0 +1,78 @@
+# Justificación de los patrones creacionales
+
+## Patrón 1: Factory Method (creación de usuarios)
+
+### El problema
+
+En el proyecto existen tres formas distintas de crear un `User`, cada una con reglas propias:
+
+1. **Registro público** (`POST /users`): cualquier persona se registra con nombre, email y contraseña. Siempre entra con rol `User` — nadie puede auto-asignarse otro rol desde acá.
+2. **Login con Google**: si es la primera vez que alguien entra con su cuenta de Google, se crea el usuario sin contraseña (nunca escribió una) y también con rol `User`.
+3. **Creación desde el panel de administrador** (`POST /users/admin`): un admin crea un usuario eligiendo el rol (`User`, `Organizer` o `Admin`). Esta es la única de las tres rutas donde el rol no es fijo.
+
+Antes de resolverlo con un patrón, esta lógica vivía repetida (o parcialmente repetida) en cada servicio que necesitaba crear un usuario: buscar el rol en la base de datos, hashear la contraseña si había una, y armar el objeto final para Prisma. Esto no es solo un problema de "código duplicado" — fue la causa directa de un bug real durante el desarrollo: al renombrar los roles (`'user'` → `'User'`, con mayúscula) en todo el proyecto, quedó un `'user'` hardcodeado suelto en uno de estos puntos, y el registro público se rompió silenciosamente (404 "rol no existe") porque nadie centralizaba esa búsqueda de rol en un solo lugar.
+
+Además, cada forma de creación tiene una entrada distinta (`RegistrationInput`, `GoogleOAuthInput`, `AdminCreationInput`) pero todas terminan en lo mismo: un `User` persistido. Mezclar esas tres variantes en un único método con `if/else` según el "tipo" de creación viola Open/Closed — cada nueva forma de crear un usuario (y ya llevamos tres, con una cuarta casi segura si se agrega registro por otro proveedor OAuth) obligaría a modificar ese método central cada vez.
+
+### Por qué Factory Method resuelve esto
+
+Factory Method separa **"qué variante de los datos hay que construir"** de **"cómo se instancia y persiste el objeto final"**. Cada forma de crear un usuario se convierte en una clase que sabe resolver *su propia* lógica (buscar el rol correcto, hashear o no la contraseña) y la entrega en un formato común; una sola pieza central (`UserFactory`) no necesita saber cuántas variantes existen ni en qué se diferencian — solo pide "los datos ya resueltos" y los inserta.
+
+Esto resuelve los dos problemas concretos de arriba:
+
+- **El bug del rol hardcodeado no puede volver a pasar de la misma forma**: la búsqueda del rol está en un solo lugar por estrategia, no repetida a mano en cada servicio.
+- **Agregar una cuarta forma de crear un usuario no toca código existente** (Open/Closed): se agrega una clase nueva que implementa la interfaz, y `UserFactory` sigue exactamente igual. Esto ya se puso a prueba en la práctica: la creación por admin se agregó *después* del registro y Google, sin modificar `UserFactory` ni las otras dos estrategias.
+
+### Diagrama UML
+
+```mermaid
+classDiagram
+    class UserCreationStrategy~TInput~ {
+        <<interface>>
+        +buildUserData(input: TInput) Promise~BuiltUserData~
+    }
+
+    class BuiltUserData {
+        +name: string
+        +email: string
+        +password: string|null
+        +roleId: string
+    }
+
+    class RegistrationStrategy {
+        +buildUserData(input: RegistrationInput) Promise~BuiltUserData~
+    }
+
+    class GoogleOAuthStrategy {
+        +buildUserData(input: GoogleOAuthInput) Promise~BuiltUserData~
+    }
+
+    class AdminCreationStrategy {
+        +buildUserData(input: AdminCreationInput) Promise~BuiltUserData~
+    }
+
+    class UserFactory {
+        -prisma: PrismaService
+        +create(strategy: UserCreationStrategy, input) Promise~User~
+    }
+
+    UserCreationStrategy <|.. RegistrationStrategy
+    UserCreationStrategy <|.. GoogleOAuthStrategy
+    UserCreationStrategy <|.. AdminCreationStrategy
+    UserCreationStrategy ..> BuiltUserData : produce
+    UserFactory ..> UserCreationStrategy : usa (inyectada)
+    UserFactory ..> BuiltUserData : consume
+```
+
+### Correspondencia con los participantes del patrón (GoF)
+
+| Participante GoF | Clase en el dominio | Rol |
+|---|---|---|
+| **Product** | `BuiltUserData` | El resultado que produce cada variante: los datos ya resueltos (rol encontrado, contraseña hasheada o `null`), listos para persistir. |
+| **Creator** | `UserCreationStrategy<TInput>` | Declara el factory method (`buildUserData`) sin saber cómo se implementa en cada caso. |
+| **ConcreteCreator** | `RegistrationStrategy`, `GoogleOAuthStrategy`, `AdminCreationStrategy` | Cada una implementa `buildUserData` a su manera (rol fijo vs. elegido, con o sin contraseña). |
+| **Client** | `UserFactory` | Recibe cualquier `UserCreationStrategy` (sin saber cuál) y lo usa de forma polimórfica para obtener el `Product`, para luego instanciar y persistir el `User` real en la base de datos. |
+
+### Adaptación al dominio
+
+La diferencia frente al Factory Method "de libro" es deliberada: en el GoF clásico, `Creator` y `ConcreteCreator` se relacionan por **herencia** (el `ConcreteCreator` es una subclase que sobreescribe el método). Acá se relacionan por **composición**: `UserFactory` no hereda de nada, simplemente recibe la estrategia inyectada por constructor (vía el sistema de Inyección de Dependencias de NestJS). Es una adaptación común al implementar Factory Method en frameworks con DI, y además es más alineada con SOLID — en particular con Dependency Inversion, porque `UserFactory` depende de la abstracción `UserCreationStrategy`, nunca de una estrategia concreta.
