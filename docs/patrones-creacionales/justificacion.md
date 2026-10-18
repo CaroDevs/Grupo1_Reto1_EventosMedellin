@@ -76,3 +76,27 @@ classDiagram
 ### Adaptación al dominio
 
 La diferencia frente al Factory Method "de libro" es deliberada: en el GoF clásico, `Creator` y `ConcreteCreator` se relacionan por **herencia** (el `ConcreteCreator` es una subclase que sobreescribe el método). Acá se relacionan por **composición**: `UserFactory` no hereda de nada, simplemente recibe la estrategia inyectada por constructor (vía el sistema de Inyección de Dependencias de NestJS). Es una adaptación común al implementar Factory Method en frameworks con DI, y además es más alineada con SOLID — en particular con Dependency Inversion, porque `UserFactory` depende de la abstracción `UserCreationStrategy`, nunca de una estrategia concreta.
+
+## Patrón 2: Builder
+
+### El problema
+
+
+
+### Por qué Builder resuelve esto
+
+
+
+### Diagrama UML
+
+
+```mermaid
+classDiagram
+
+```
+
+### Correspondencia con los participantes del patrón (GoF)
+
+
+### Adaptación al dominio
+
