@@ -125,6 +125,7 @@ export function UsersAdminPanel() {
       {deletingUser && (
         <ConfirmDeleteModal
           name={deletingUser.name}
+          title="Borrar usuario"
           onCancel={() => setDeletingUser(null)}
           onConfirm={() => void handleConfirmDelete()}
         />
