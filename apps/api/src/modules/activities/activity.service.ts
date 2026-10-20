@@ -4,7 +4,9 @@ import { CreateActivityDto } from "./dto/create-activity.dto";
 import { IActivityBuilder } from "./Interfaces/activity.interface";
 import { ActivityBuilder } from "./activity.builder";
 import { UpdateActivityDto } from "./dto/update-activity.dto";
+import { Injectable } from "@nestjs/common";
 
+@Injectable()
 export class ActivityService
 {
     constructor(private readonly prisma: PrismaService){}
