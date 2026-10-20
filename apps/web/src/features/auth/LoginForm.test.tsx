@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { LoginForm } from './LoginForm';
 import { apiPost } from '../../shared/http/client';
 import { getSessionUser } from '../../shared/auth/session';
@@ -12,12 +13,14 @@ vi.mock('../../shared/http/client', () => ({
 
 function renderLoginForm() {
   return render(
-    <MemoryRouter initialEntries={['/login']}>
-      <Routes>
-        <Route path="/login" element={<LoginForm />} />
-        <Route path="/activities" element={<p>Página de actividades</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <GoogleOAuthProvider clientId="fake-client-id-para-tests">
+      <MemoryRouter initialEntries={['/login']}>
+        <Routes>
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/activities" element={<p>Página de actividades</p>} />
+        </Routes>
+      </MemoryRouter>
+    </GoogleOAuthProvider>,
   );
 }
 

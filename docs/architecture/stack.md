@@ -130,6 +130,130 @@ JWT.
 ["Proteger una ruta nueva"](./guia-crud.md#proteger-una-ruta-nueva) de
 la guía de CRUD.
 
+### Login con Google (OAuth)
+
+**Qué es:** en vez de que la persona escriba un email y contraseña
+propios de esta app, "Iniciar sesión con Google" deja que Google
+confirme quién es, y nuestro backend confía en esa confirmación.
+
+**Por qué este enfoque en particular:** hay dos formas típicas de hacer
+"login con Google". La clásica usa *redirects* (tu app manda al
+navegador a una URL de Google, Google te devuelve a otra URL tuya con un
+código) — pensada para apps que renderiza el servidor. Como somos una
+SPA, usamos **Google Identity Services**: Google pone un botón en el
+frontend que, al tocarlo, le da directo al navegador un token firmado
+(el `idToken`) — sin que el backend tenga que manejar ningún redirect.
+
+**Cómo funciona acá, de punta a punta:**
+
+1. [`GoogleLoginButton.tsx`](../../apps/web/src/features/auth/GoogleLoginButton.tsx)
+   renderiza el botón de Google (vía
+   [`@react-oauth/google`](https://www.npmjs.com/package/@react-oauth/google),
+   que envuelve a Google Identity Services). Al tener éxito, Google le da
+   un `credential` (el `idToken`) — nunca pasa por nuestro backend en
+   este paso, es directo entre el navegador y Google.
+2. El frontend manda ese `idToken` a `POST /auth/google`.
+3. [`auth.service.ts`](../../apps/api/src/modules/auth/auth.service.ts)
+   le pasa el `idToken` a
+   [`GoogleTokenVerifier`](../../apps/api/src/common/auth/google-token-verifier.ts),
+   que es quien de verdad usa `google-auth-library` para confirmar que
+   lo firmó Google (y que es para *nuestra* app — por eso hace falta el
+   `GOOGLE_CLIENT_ID` también en el backend). Si es válido, saca el
+   email y nombre ya verificados del payload.
+
+   `AuthService` no conoce `google-auth-library` ni crea su cliente —
+   solo conoce la interfaz `GoogleTokenVerifier` (un método: `verify`).
+   El enlace entre esa interfaz y `GoogleTokenVerifierImpl` (la que sí
+   usa la librería) se hace en `auth.module.ts` con un *injection
+   token* (`GOOGLE_TOKEN_VERIFIER`) — en TypeScript no se puede inyectar
+   por interfaz directamente (se borran al compilar), así que un
+   `Symbol` hace ese papel. Esto es Inversión de Dependencias (la "D"
+   de SOLID): si mañana cambia cómo se verifica el token (otra librería,
+   otro proveedor de login), solo se cambia `GoogleTokenVerifierImpl` —
+   `AuthService` ni se entera. También simplifica los tests: antes había
+   que interceptar el `OAuth2Client` real con `jest.spyOn`; ahora
+   `auth.service.spec.ts` simplemente pasa un objeto `{ verify: jest.fn() }`.
+4. Busca un `User` con ese email. Si existe, lo loguea. Si no existe,
+   **lo crea** — con `password` en `null`, porque nunca escribió una.
+5. Devuelve `{ user, accessToken }`, exactamente la misma forma que el
+   login normal — el frontend no necesita saber si alguien entró con
+   contraseña o con Google, lo trata igual de ahí en adelante.
+
+**Por qué `password` es opcional en el modelo `User`:** antes era
+obligatorio. Una cuenta creada por Google no tiene — intentar loguearse
+con email/contraseña en esa cuenta ahora falla con el mismo mensaje
+genérico que cualquier otro intento fallido (no revela que esa cuenta
+"solo entra por Google").
+
+**Cómo se crea un usuario de verdad, sea cual sea el camino:** ver la
+sección ["El patrón Factory Method"](#el-patrón-factory-method-creación-de-usuarios)
+más abajo — con Google fue el momento en que dejó de alcanzar con
+código suelto en cada lugar.
+
+**Para configurarlo en tu máquina:** necesitás un Client ID propio de
+[Google Cloud Console](https://console.cloud.google.com/) (pantalla de
+consentimiento OAuth + credencial "OAuth 2.0 Client ID"), puesto en
+`GOOGLE_CLIENT_ID` (`apps/api/.env`) y `VITE_GOOGLE_CLIENT_ID`
+(`apps/web/.env`) — el mismo valor en los dos. El Client Secret que te
+da Google **no se usa en ningún lado** de este flujo. Mientras el
+proyecto esté en "modo de prueba" en Google Cloud Console, solo entran
+las cuentas que agregues explícitamente como "usuarios de prueba".
+
+### El patrón Factory Method (creación de usuarios)
+
+**Qué es:** en vez de que cada lugar del código que crea un usuario
+repita "buscar el rol, hashear la contraseña si hay, insertar en la
+base de datos", esa lógica se separa en dos piezas: una **estrategia**
+por cada forma de crear un usuario (sabe armar los datos para *su*
+caso), y una **fábrica** única que recibe cualquier estrategia y hace
+el `insert` real. Es el patrón creacional `Factory Method` — delegar la
+decisión de *cómo* construir algo a una subclase/estrategia, mientras
+el código que usa el resultado no necesita saber cuál se usó.
+
+**Por qué recién ahora:** antes había solo dos formas de crear un
+usuario (registro normal y Google) — con dos casos cortos, la
+abstracción no pagaba. Agregar una tercera (un admin creando un usuario
+desde el panel, **eligiendo el rol directo** — algo que el registro
+público nunca debería poder hacer) fue el punto donde repetir la misma
+lógica tres veces empezaba a doler más que extraerla.
+
+**Las piezas, todas en `apps/api/src/common/users/`:**
+
+| Archivo | Qué hace |
+|---|---|
+| [`user-creation-strategy.ts`](../../apps/api/src/common/users/user-creation-strategy.ts) | La interfaz: `buildUserData(input)` → `{ name, email, password, roleId }` ya resueltos |
+| [`registration.strategy.ts`](../../apps/api/src/common/users/registration.strategy.ts) | Registro público — hashea la contraseña, siempre rol `User` |
+| [`google-oauth.strategy.ts`](../../apps/api/src/common/users/google-oauth.strategy.ts) | Login con Google — sin contraseña (`null`), siempre rol `User` |
+| [`admin-creation.strategy.ts`](../../apps/api/src/common/users/admin-creation.strategy.ts) | Un admin crea el usuario — hashea la contraseña, usa el rol que el admin eligió |
+| [`user.factory.ts`](../../apps/api/src/common/users/user.factory.ts) | La fábrica: le pide los datos a la estrategia que le pasen y hace `prisma.user.create(...)` — ni sabe ni le importa cuál estrategia fue |
+| [`user-factory.module.ts`](../../apps/api/src/common/users/user-factory.module.ts) | Módulo de Nest que expone estas piezas — lo importan `UserModule` y `AuthModule` |
+
+**Cómo se usa, en la práctica:**
+
+```ts
+// UserService.create() — registro público
+return this.userFactory.create(this.registrationStrategy, dto);
+
+// UserService.createByAdmin() — POST /users/admin, protegido con
+// JwtAuthGuard + RolesGuard(Admin)
+return this.userFactory.create(this.adminCreationStrategy, dto);
+
+// AuthService.loginWithGoogle() — solo si el usuario no existía
+await this.userFactory.create(this.googleOAuthStrategy, { email, name });
+```
+
+**Por qué es seguro que `AdminCreationStrategy` sí deje elegir el rol,**
+cuando a propósito el registro público no puede: porque el único lugar
+que la usa (`POST /users/admin`) ya está protegido —
+`@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles('Admin')` — nadie
+llega ahí sin ser admin primero. La estrategia en sí no valida permisos,
+confía en que el controller que la llama ya lo hizo.
+
+**Si agregan una cuarta forma** (otro proveedor OAuth, importación
+masiva por CSV...): crean una estrategia nueva implementando
+`UserCreationStrategy`, la agregan a `UserFactoryModule`, y la inyectan
+donde haga falta — `UserFactory` no cambia ni se entera.
+
 ## Frontend (`apps/web`)
 
 ### React

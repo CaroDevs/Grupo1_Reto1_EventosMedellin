@@ -1,5 +1,6 @@
 import { useState, type SubmitEvent } from 'react';
 import { apiPost } from '../../shared/http/client';
+import { ROLE_NAMES, type RoleName } from '@medellin-activities/shared-types';
 import type { User } from '../auth/User';
 
 export function CreateUserModal({
@@ -12,6 +13,7 @@ export function CreateUserModal({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<RoleName>('User');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -21,7 +23,7 @@ export function CreateUserModal({
     setSaving(true);
 
     try {
-      await apiPost<User>('/users', { name, email, password });
+      await apiPost<User>('/users/admin', { name, email, password, role });
       onCreated();
     } catch (err) {
       setError(
@@ -46,11 +48,6 @@ export function CreateUserModal({
               </div>
 
               <div className="modal-body">
-                <p className="text-muted small">
-                  Se crea con rol <strong>User</strong>. Si necesitas otro rol, edítalo después
-                  de crearlo.
-                </p>
-
                 <div className="mb-3">
                   <label className="form-label" htmlFor="create-name">
                     Nombre
@@ -93,6 +90,24 @@ export function CreateUserModal({
                     minLength={8}
                     required
                   />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="create-role">
+                    Rol
+                  </label>
+                  <select
+                    id="create-role"
+                    className="form-select"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as RoleName)}
+                  >
+                    {ROLE_NAMES.map((roleOption) => (
+                      <option key={roleOption} value={roleOption}>
+                        {roleOption}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {error && (

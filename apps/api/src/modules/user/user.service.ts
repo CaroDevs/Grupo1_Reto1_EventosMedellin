@@ -1,47 +1,28 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
-import { DEFAULT_ROLE } from '@medellin-activities/shared-types';
+import { UserFactory } from '../../common/users/user.factory';
+import { RegistrationStrategy } from '../../common/users/registration.strategy';
+import { AdminCreationStrategy } from '../../common/users/admin-creation.strategy';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateUserByAdminDto } from './dto/create-user-by-admin.dto';
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly userFactory: UserFactory,
+    private readonly registrationStrategy: RegistrationStrategy,
+    private readonly adminCreationStrategy: AdminCreationStrategy,
+  ) {}
 
-  async create(dto: CreateUserDto) {
-    const role = await this.prisma.role.findUnique({
-      where: { name: DEFAULT_ROLE },
-    });
+  create(dto: CreateUserDto) {
+    return this.userFactory.create(this.registrationStrategy, dto);
+  }
 
-    if (!role) {
-      throw new NotFoundException(`El rol "${DEFAULT_ROLE}" no existe. ¿Corriste el seed?`);
-    }
-
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    try {
-      const user = await this.prisma.user.create({
-        data: {
-          name: dto.name,
-          email: dto.email,
-          password: hashedPassword,
-          roleId: role.id,
-        },
-      });
-
-      const { password, ...safeUser } = user;
-      return safeUser;
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Ese email ya está registrado');
-      }
-      throw error;
-    }
+  createByAdmin(dto: CreateUserByAdminDto) {
+    return this.userFactory.create(this.adminCreationStrategy, dto);
   }
 
   findAll() {

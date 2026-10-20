@@ -95,6 +95,15 @@ email:      admin@itm.com
 contraseña: 12345678
 ```
 
+También se puede entrar con **"Iniciar sesión con Google"** desde
+`/login` o `/register` — necesita que tu `.env` tenga `GOOGLE_CLIENT_ID`
+(backend) y `VITE_GOOGLE_CLIENT_ID` (frontend) configurados con un Client
+ID real de Google Cloud Console, y que tu cuenta de Gmail esté agregada
+como "usuario de prueba" ahí (la app está en modo de prueba, no
+cualquier cuenta de Google puede entrar todavía). Ver
+[stack.md](docs/architecture/stack.md#login-con-google-oauth) para el
+detalle completo.
+
 ¿Primera vez con este stack? Lee
 [docs/architecture/stack.md](docs/architecture/stack.md): explica qué es
 cada tecnología (NestJS, Prisma, PostgreSQL, React, Vite, React Router,
