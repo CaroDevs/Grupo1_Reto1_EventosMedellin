@@ -39,9 +39,9 @@ model Role {
 
 model Category{
   id String   @id @default(uuid())
-  name String
+  name String @unique
   description String
   createdAt DateTime @default(now())
   @@map("categories")
-  
+
 }

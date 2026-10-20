@@ -1,4 +1,4 @@
-import { CategoriesPanel } from "../../features/categories/categoriespanel";
+import { CategoriesPanel } from "../../features/categories/categoriesPanel";
 
 export function CategoriesPage() {
   return (

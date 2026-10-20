@@ -28,6 +28,16 @@ async function main() {
     },
   });
 
+  await prisma.category.createMany({
+    data: [
+      { name: 'Cultura', description: 'Cine, teatro, música y artes en general.' },
+      { name: 'Salud', description: 'Actividades de bienestar físico y mental.' },
+      { name: 'Deporte', description: 'Actividades deportivas y recreativas.' },
+      { name: 'Educación', description: 'Talleres, charlas y formación.' },
+    ],
+    skipDuplicates: true,
+  });
+
   await prisma.activity.createMany({
     data: [
       {
