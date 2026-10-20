@@ -96,6 +96,55 @@ El Patrón Builder nos permite configurar los atributos de la actividad de maner
 
 ```mermaid
 classDiagram
+    class IActivityBuilder {
+            <<interface>>
+            +setTitle(title: string): IActivityBuilder
+            +setDescription(description?: string): IActivityBuilder
+            +setCategory(category: string): IActivityBuilder
+            +setCity(city: string): IActivityBuilder
+            +setPrice(price?: number): IActivityBuilder
+            +setCapacity(capacity?: number): IActivityBuilder
+            +setStartDate(startDate?: string): IActivityBuilder
+            +build(): any
+        }
+    
+        class ActivityBuilder {
+            -title: string
+            -description: string
+            -category: string
+            -city: string
+            -price: number 
+            -capacity: number 
+            -startDate: string 
+            +setTitle(title: string): ActivityBuilder
+            +setDescription(description?: string): ActivityBuilder
+            +setCategory(category: string): ActivityBuilder
+            +setCity(city: string): ActivityBuilder
+            +setPrice(price?: number): ActivityBuilder
+            +setCapacity(capacity?: number): ActivityBuilder
+            +setStartDate(startDate?: string): ActivityBuilder
+            +build(): any
+            +fromDto(dto: CreateActivityDto): ActivityBuilder
+        }
+    
+        class ActivitiesService {
+            +ActivitiesService(prisma: PrismaService)
+            +create(createActivityDto: CreateActivityDto): Promise~Activity~
+            +findAll(): Promise~Activity[]~
+            +findOne(id: string) : Promise~Activity~
+            +update(id: string, updateActivityDto: UpdateActivityDto): Promise~Activity~
+            +remove(id: string): Promise~Activity~
+        }
+    
+        class Activity {
+            +title: string
+            +description: string
+            +category: string
+            +city: string
+            +price: number 
+            +capacity: number 
+            +startDate: string 
+        }
 
 ```
 
