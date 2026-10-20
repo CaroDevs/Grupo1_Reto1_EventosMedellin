@@ -80,23 +80,101 @@ La diferencia frente al Factory Method "de libro" es deliberada: en el GoF clás
 ## Patrón 2: Builder
 
 ### El problema
+Inicialmente, el modelo de Actividades en el proyecto era sumamente simple y se limitaba a un atributo generalizado (título y descripción).Pero al pensar en la capacidad evolutiva y teniendo en cuenta requerimientos del Reto Medellín, los atributos de las actividades crecieron, agregando nuevos como: Precio, ciudad, capacidad entre otros.
 
+Sin el uso del patrón, gestionar la creación de una actividad traía problemas críticos:
 
+1. **Métodos gigantes**: Al agregar nuevos atributos, los métodos encargados de instancias la actividad terminaban recibiendo una cantidad grande de parámetros, permitiendo la posibilidad de errores humanos al llamarlos.
+2. **Lógica condicional dispersa**: Sin un lugar centralizado, el controlador tenía que lidiar con múltiples condicionales para verificar qué datos envió el usuario, asignar valores por defecto y validar la estructura antes de enviarla a Prisma.
+3.  **Violación del Open/Closed (OCP)**: Cada vez que el proyecto solicitaba un nuevo atributo para las actividades, se debia modificar directamente la firma y el cuerpo de los métodos de creación, rompiendo código y aumentando el acoplamiento.
 
 ### Por qué Builder resuelve esto
-
-
+El Patrón Builder nos permite configurar los atributos de la actividad de manera independiente y encadenada, permitiendo que el código sea descriptivo y legible. Al implementar este patrón evitamos la contaminación del servicio con lógica repetitiva y además nos permite tener escalabilidad, dándonos la posibilidad de agregar más atributos futuros, sin romper ningún flujo de creación existente.
 
 ### Diagrama UML
 
 
 ```mermaid
 classDiagram
+    class ActivityController {
+        - activityService: ActivityService
+        + create(createActivityDto: CreateActivityDto) Promise~Activity~
+        + findAll() Promise~Activity[]~
+        + findOne(id: string) Promise~Activity~
+        + update(id: string, updateActivityDto: UpdateActivityDto) Promise~Activity~
+        + remove(id: string) Promise~Activity~
+    }
 
+    class ActivityService {
+        - prisma: PrismaService:
+        + create(createActivityDto: CreateActivityDto) Promise~Activity~
+        + findAll() Promise~Activity[]~
+        + findOne(id: string) Promise~Activity~
+        + update(id: string, updateActivityDto: UpdateActivityDto) Promise~Activity~
+        + remove(id: string) Promise~Activity~
+    }
+
+    class IActivityBuilder {
+        <<interface>>
+        + setTitle(title: string) IActivityBuilder
+        + setDescription(description: string) IActivityBuilder
+        + setCategory(category: string) IActivityBuilder
+        + setCity(city: string) IActivityBuilder
+        + setPrice(price: number) IActivityBuilder
+        + setCapacity(capacity: number) IActivityBuilder
+        + setStartDate(startDate: string) IActivityBuilder
+        + build() any
+    }
+
+    class ActivityBuilder {
+        - title: string 
+        - description: string 
+        - category: string 
+        - city: string 
+        - price: number 
+        - capacity: number
+        - startDate: string 
+        + setTitle(title: string) ActivityBuilder
+        + setDescription(description: string) ActivityBuilder
+        + setCategory(category: string) ActivityBuilder
+        + setCity(city: string) ActivityBuilder
+        + setPrice(price: number) ActivityBuilder
+        + setCapacity(capacity: number) ActivityBuilder
+        + setStartDate(startDate: string) ActivityBuilder
+        + build() any
+        + fromDto(dto: CreateActivityDto)$ ActivityBuilder
+    }
+
+    class Activity {
+        + title: string 
+        + description: string 
+        + category: string 
+        + city: string 
+        + price: number 
+        + capacity: number
+        + startDate: string 
+        + createdAt: DateTime
+        + updatedAt: DateTime
+    }
+
+    ActivityController --> ActivityService : "usa"
+    ActivityService --> IActivityBuilder : "utiliza"
+    IActivityBuilder <|.. ActivityBuilder : "implementa"
+    ActivityBuilder ..> Activity : "construye / retorna"
 ```
 
 ### Correspondencia con los participantes del patrón (GoF)
+| Participante GoF | Clase en el dominio | Rol |
+|---|---|---|
+| **Client** | `ActivityController` | Expone los endpoints HTTP del CRUD. Recibe las peticiones desde el Frontend (React) con el CreateActivityDto y delega la ejecución al servicio. |
+| **Director** | `ActivityService` | Orquesta la construcción de la actividad instanciando o invocando ActivityBuilder, configura los datos y persiste el objeto en la base de datos a través de Prisma. |
+| **Builder** | `IActivityBuilder` | Interfaz que declara todos los pasos de posibles configuraciones (setTitle, setPrice, setCapacity, etc.) y el método final build().|
+| **ConcreteBuilder** | `ActivityBuilder` | Implementa los métodos de la interfaz, gestiona el estado de la actividad y aplica los valores por defecto, antes de empaquetar el objeto final. |
+| **Product** | `Activity(modelo prisma)` | El resultado que produce la construcción: el objeto completo con todos sus atributos resueltos (title, description, category, city, price, capacity, startDate), listo para persistir.|
+
 
 
 ### Adaptación al dominio
+La  diferencia entre el patrón Builder clásico y la adaptación en este proyecto se basa en el propósito y el contexto de su aplicación; en el enfoque clásico el patrón está diseñado para desacoplar la creación de un objeto complejo que requiere múltiples pasos internos(manejando estados intermedios y ensambladores independientes), adaptandola para NestJS y TypeScript  este proceso se simplifica utilizando DTOs para estructurar la entrada de datos, delegando la responsabilidad de orquestación en la capa de servicios (el Director) y conectándose de forma directa con un ORM (Prisma). De esta manera, el patrón se transforma de una estructura rígida a la gestión limpia de la lógica de negocio dentro de una arquitectura web moderna (CRUD).
+
 

@@ -1,9 +1,11 @@
 export function ConfirmDeleteModal({
   name,
+  title = 'Borrar',
   onCancel,
   onConfirm,
 }: {
   name: string;
+  title?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
@@ -13,7 +15,7 @@ export function ConfirmDeleteModal({
         <div className="modal-dialog">
           <div className="modal-content">
             <div className="modal-header">
-              <h5 className="modal-title">Borrar usuario</h5>
+              <h5 className="modal-title">{title}</h5>
               <button type="button" className="btn-close" onClick={onCancel} aria-label="Cerrar" />
             </div>
 

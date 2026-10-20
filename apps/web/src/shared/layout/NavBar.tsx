@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { clearSessionUser, useSessionUser } from '../auth/session';
-import { ADMIN_ROLE } from '@medellin-activities/shared-types';
+import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 
 export function NavBar() {
   const user = useSessionUser();
   const navigate = useNavigate();
+  const canManage = user?.role.name === ADMIN_ROLE || user?.role.name === ORGANIZER_ROLE;
 
   function handleLogout() {
     clearSessionUser();
@@ -37,14 +38,33 @@ export function NavBar() {
                 Actividades
               </Link>
             </li>
-            {user?.role.name === ADMIN_ROLE && (
-              <li className="nav-item">
-                <Link className="nav-link" to="/admin/users">
-                  Administrar usuarios
-                </Link>
+            {canManage && (
+              <li className="nav-item dropdown">
+                <button
+                  className="nav-link dropdown-toggle btn btn-link"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Gestionar
+                </button>
+                <ul className="dropdown-menu">
+                  {user?.role.name === ADMIN_ROLE && (
+                    <li>
+                      <Link className="dropdown-item" to="/admin/users">
+                        Usuarios
+                      </Link>
+                    </li>
+                  )}
+                  <li>
+                    <Link className="dropdown-item" to="/admin/categories">
+                      Categorías
+                    </Link>
+                  </li>
+                </ul>
               </li>
             )}
-          </ul>
+          </ul> 
 
           <ul className="navbar-nav">
             <li className="nav-item dropdown">
