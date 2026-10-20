@@ -97,7 +97,7 @@ El Patrón Builder nos permite configurar los atributos de la actividad de maner
 ```mermaid
 classDiagram
       class ActivityController {
-        - activitiesService: ActivitiesService
+        - activityService: ActivityService
         + create(createActivityDto: CreateActivityDto): Promise<Activity>
         + findAll(): Promise<Activity[]>
         + findOne(id: string): Promise<Activity>
@@ -160,7 +160,6 @@ classDiagram
     ActivityService --> IActivityBuilder : "utiliza"
     ActivityBuilder ..|> IActivityBuilder : "implementa"
     ActivityBuilder ..> Activity : "construye / retorna"
-}
 
 ```
 
