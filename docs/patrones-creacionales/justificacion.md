@@ -80,12 +80,16 @@ La diferencia frente al Factory Method "de libro" es deliberada: en el GoF clás
 ## Patrón 2: Builder
 
 ### El problema
+Inicialmente, el modelo de Actividades en el proyecto era sumamente simple y se limitaba a un atributo generalizado (título y descripción).Pero al pensar en la capacidad evolutiva y teniendo en cuenta requerimientos del Reto Medellín, los atributos de las actividades crecieron, agregando nuevos como: Precio, ciudad, capacidad entre otros.
 
+Sin el uso del patrón, gestionar la creación de una actividad traía problemas críticos:
 
+1. **Métodos gigantes**: Al agregar nuevos atributos, los métodos encargados de instancias la actividad terminaban recibiendo una cantidad grande de parámetros, permitiendo la posibilidad de errores humanos al llamarlos.
+2. **Lógica condicional dispersa**: Sin un lugar centralizado, el controlador tenía que lidiar con múltiples condicionales para verificar qué datos envió el usuario, asignar valores por defecto y validar la estructura antes de enviarla a Prisma.
+3.  **Violación del Open/Closed (OCP)**: Cada vez que el proyecto solicitaba un nuevo atributo para las actividades, se debia modificar directamente la firma y el cuerpo de los métodos de creación, rompiendo código y aumentando el acoplamiento.
 
 ### Por qué Builder resuelve esto
-
-
+El Patrón Builder nos permite configurar los atributos de la actividad de manera independiente y encadenada, permitiendo que el código sea descriptivo y legible. Al implementar este patrón evitamos la contaminación del servicio con lógica repetitiva y además nos permite tener escalabilidad, dándonos la posibilidad de agregar más atributos futuros, sin romper ningún flujo de creación existente.
 
 ### Diagrama UML
 
