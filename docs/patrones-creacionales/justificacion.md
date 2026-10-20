@@ -97,7 +97,7 @@ El Patrón Builder nos permite configurar los atributos de la actividad de maner
 ```mermaid
 classDiagram
     class ActivityController {
-        - ActivityService activityService
+        - ActivityService: activityService
         + create(createActivityDto: CreateActivityDto) Promise~Activity~
         + findAll() Promise~Activity[]~
         + findOne(id: string) Promise~Activity~
@@ -106,7 +106,7 @@ classDiagram
     }
 
     class ActivityService {
-        - PrismaService prisma
+        - PrismaService: prisma
         + create(createActivityDto: CreateActivityDto) Promise~Activity~
         + findAll() Promise~Activity[]~
         + findOne(id: string) Promise~Activity~
@@ -127,13 +127,13 @@ classDiagram
     }
 
     class ActivityBuilder {
-        - string title
-        - string description
-        - string category
-        - string city
-        - number price
-        - number capacity
-        - string startDate
+        - title: string 
+        - description: string 
+        - category: string 
+        - city: string 
+        - price: number 
+        - capacity: number
+        - startDate: string 
         + setTitle(title: string) ActivityBuilder
         + setDescription(description: string) ActivityBuilder
         + setCategory(category: string) ActivityBuilder
@@ -146,16 +146,15 @@ classDiagram
     }
 
     class Activity {
-        + string id
-        + string title
-        + string description
-        + string category
-        + string city
-        + number price
-        + number capacity
-        + string startDate
-        + DateTime createdAt
-        + DateTime updatedAt
+        + title: string 
+        + description: string 
+        + category: string 
+        + city: string 
+        + price: number 
+        + capacity: number
+        + startDate: string 
+        + createdAt: DateTime
+        + updatedAt: DateTime
     }
 
     ActivityController --> ActivityService : "usa"
