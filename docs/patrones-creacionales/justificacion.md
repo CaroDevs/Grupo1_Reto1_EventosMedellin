@@ -127,8 +127,8 @@ classDiagram
             +fromDto(dto: CreateActivityDto) ActivityBuilder
         }
     
-        class ActivitiesService {
-            +ActivitiesService(prisma: PrismaService)
+        class ActivityService {
+            +ActivityService(prisma: PrismaService)
             +create(createActivityDto: CreateActivityDto) Promise~Activity~
             +findAll() Promise~Activity[]~
             +findOne(id: string) Promise~Activity~
@@ -146,13 +146,21 @@ classDiagram
             +startDate: string 
         }
     ActivityBuilder ..|> IActivityBuilder : "implementa"
-    ActivitiesService --> IActivityBuilder : "usa (depende de la abstracción)"
+    ActivityService --> IActivityBuilder : "usa"
     ActivityBuilder ..> Activity : "construye / retorna"
 
 ```
 
 ### Correspondencia con los participantes del patrón (GoF)
-
+| Participante GoF | Clase en el dominio | Rol |
+|---|---|---|
+| **Product** | `Activity` | El resultado que produce la construcción: el objeto completo con todos sus atributos resueltos (title, description, category, city, price, capacity, startDate), listo para persistir.|
+| **Builder** | `IActivityBuilder` | Interfaz que declara todos los pasos de posibles configuraciones (setTitle, setPrice, setCapacity, etc.) y el método final build().|
+| **ConcreteBuilder** | `ActivityBuilder` | Implementa los métodos de la interfaz, gestiona el estado de la actividad y aplica los valores por defecto, antes de empaquetar el objeto final. |
+| **Client** | `ActivityService` | Es la capa de negocio que instancia o invoca el ActivityBuilder, configura los atributos necesarios a partir del CreateActivityDto utilizando la interfaz fluida, y entrega el Product resultante a Prisma para su persistencia. |
 
 ### Adaptación al dominio
+La diferencia frente al Builder del GoF, se realiza para adaptarla al lenguaje implementado (TypeScript).
+En este caso eliminamos el Director, que en la literatura es el que conoce "recetas" fijas de construcción, en el proyecto las peticiones provienen de un cliente React a través de un DTO(CreateActivityDto); el servicio ActivityService es el que asume el rol del Director, llamando a los setters correspondientes en la solicitud HTTP.
+
 
