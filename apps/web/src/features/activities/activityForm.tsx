@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react';
-import { apiPost } from '../../shared/http/client';
+import { useEffect, useState, type FormEvent } from 'react';
+import { apiGet, apiPost } from '../../shared/http/client';
+import type { Category } from '../categories/category';
 
 interface ActivitiesFormProps {
   onActivityCreated: () => void;
@@ -9,11 +10,20 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
   const [city, setCity] = useState('Medellín');
   const [price, setPrice] = useState<number>(0);
   const [capacity, setCapacity] = useState<number>(10);
   const [startDate, setStartDate] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiGet<Category[]>('/categories')
+      .then((result) =>
+        setCategories([...result].sort((a, b) => a.name.localeCompare(b.name, 'es'))),
+      )
+      .catch((err: unknown) => console.error('No se pudieron cargar las categorías:', err));
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,17 +76,25 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
           />
         </div>
         <div className="col-md-6">
-          <label className="form-label">
+          <label className="form-label" htmlFor="activity-category">
             Categoría <span className="text-danger">*</span>
           </label>
-          <input
-            type="text"
-            className="form-control"
+          <select
+            id="activity-category"
+            className="form-select"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="Ej. Cultura, Deportes"
             required
-          />
+          >
+            <option value="" disabled>
+              Selecciona una categoría
+            </option>
+            {categories.map((option) => (
+              <option key={option.id} value={option.name}>
+                {option.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="col-md-12">
           <label className="form-label">
