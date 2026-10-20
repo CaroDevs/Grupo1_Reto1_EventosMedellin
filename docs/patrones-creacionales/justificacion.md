@@ -96,71 +96,88 @@ El Patrón Builder nos permite configurar los atributos de la actividad de maner
 
 ```mermaid
 classDiagram
-    class IActivityBuilder {
-            <<interface>>
-            +setTitle(title: string) IActivityBuilder
-            +setDescription(description?: string) IActivityBuilder
-            +setCategory(category: string) IActivityBuilder
-            +setCity(city: string) IActivityBuilder
-            +setPrice(price?: number) IActivityBuilder
-            +setCapacity(capacity?: number) IActivityBuilder
-            +setStartDate(startDate?: string) IActivityBuilder
-            +build() any
-        }
+    {
     
-        class ActivityBuilder {
-            -title: string
-            -description: string
-            -category: string
-            -city: string
-            -price: number 
-            -capacity: number 
-            -startDate: string 
-            +setTitle(title: string) ActivityBuilder
-            +setDescription(description?: string) ActivityBuilder
-            +setCategory(category: string) ActivityBuilder
-            +setCity(city: string) ActivityBuilder
-            +setPrice(price?: number) ActivityBuilder
-            +setCapacity(capacity?: number) ActivityBuilder
-            +setStartDate(startDate?: string) ActivityBuilder
-            +build() any
-            +fromDto(dto: CreateActivityDto) ActivityBuilder
-        }
-    
-        class ActivityService {
-            +ActivityService(prisma: PrismaService)
-            +create(createActivityDto: CreateActivityDto) Promise~Activity~
-            +findAll() Promise~Activity[]~
-            +findOne(id: string) Promise~Activity~
-            +update(id: string, updateActivityDto: UpdateActivityDto) Promise~Activity~
-            +remove(id: string) Promise~Activity~
-        }
-    
-        class Activity {
-            +title: string
-            +description: string
-            +category: string
-            +city: string
-            +price: number 
-            +capacity: number 
-            +startDate: string 
-        }
+    class ActivityController {
+        - activitiesService: ActivitiesService
+        + create(createActivityDto: CreateActivityDto): Promise<Activity>
+        + findAll(): Promise<Activity[]>
+        + findOne(id: string): Promise<Activity>
+        + update(id: string, updateActivityDto: UpdateActivityDto): Promise<Activity>
+        + remove(id: string): Promise<Activity>
+    }
+
+    class ActivityService {
+        - prisma: PrismaService
+        + create(createActivityDto: CreateActivityDto): Promise<Activity>
+        + findAll(): Promise<Activity[]>
+        + findOne(id: string): Promise<Activity>
+        + update(id: string, updateActivityDto: UpdateActivityDto): Promise<Activity>
+        + remove(id: string): Promise<Activity>
+    }
+
+    interface IActivityBuilder {
+        + setTitle(title: string): IActivityBuilder
+        + setDescription(description?: string): IActivityBuilder
+        + setCategory(category: string): IActivityBuilder
+        + setCity(city: string): IActivityBuilder
+        + setPrice(price?: number): IActivityBuilder
+        + setCapacity(capacity?: number): IActivityBuilder
+        + setStartDate(startDate?: string): IActivityBuilder
+        + build(): any
+    }
+
+    class ActivityBuilder {
+        - title: string
+        - description: string
+        - category: string
+        - city: string
+        - price: number
+        - capacity: number
+        - startDate: string
+        + setTitle(title: string): ActivityBuilder
+        + setDescription(description?: string): ActivityBuilder
+        + setCategory(category: string): ActivityBuilder
+        + setCity(city: string): ActivityBuilder
+        + setPrice(price?: number): ActivityBuilder
+        + setCapacity(capacity?: number): ActivityBuilder
+        + setStartDate(startDate?: string): ActivityBuilder
+        + build(): any
+        {static} + fromDto(dto: CreateActivityDto): ActivityBuilder
+    }
+
+    class Activity {
+        + id: string
+        + title: string
+        + description: string
+        + category: string
+        + city: string
+        + price: number
+        + capacity: number
+        + startDate: string
+        + createdAt: DateTime
+        + updatedAt: DateTime
+    }
+    ActivityController --> ActivityService : "usa"
+    ActivityService --> IActivityBuilder : "utiliza"
     ActivityBuilder ..|> IActivityBuilder : "implementa"
-    ActivityService --> IActivityBuilder : "usa"
     ActivityBuilder ..> Activity : "construye / retorna"
+}
 
 ```
 
 ### Correspondencia con los participantes del patrón (GoF)
 | Participante GoF | Clase en el dominio | Rol |
 |---|---|---|
-| **Product** | `Activity` | El resultado que produce la construcción: el objeto completo con todos sus atributos resueltos (title, description, category, city, price, capacity, startDate), listo para persistir.|
+| **Client** | `ActivityController` | Expone los endpoints HTTP del CRUD. Recibe las peticiones desde el Frontend (React) con el CreateActivityDto y delega la ejecución al servicio. |
+| **Director** | `ActivityService` | Orquesta la construcción de la actividad instanciando o invocando ActivityBuilder, configura los datos y persiste el objeto en la base de datos a través de Prisma. |
 | **Builder** | `IActivityBuilder` | Interfaz que declara todos los pasos de posibles configuraciones (setTitle, setPrice, setCapacity, etc.) y el método final build().|
 | **ConcreteBuilder** | `ActivityBuilder` | Implementa los métodos de la interfaz, gestiona el estado de la actividad y aplica los valores por defecto, antes de empaquetar el objeto final. |
-| **Client** | `ActivityService` | Es la capa de negocio que instancia o invoca el ActivityBuilder, configura los atributos necesarios a partir del CreateActivityDto utilizando la interfaz fluida, y entrega el Product resultante a Prisma para su persistencia. |
+| **Product** | `Activity(modelo prisma)` | El resultado que produce la construcción: el objeto completo con todos sus atributos resueltos (title, description, category, city, price, capacity, startDate), listo para persistir.|
+
+
 
 ### Adaptación al dominio
-La diferencia frente al Builder del GoF, se realiza para adaptarla al lenguaje implementado (TypeScript).
-En este caso eliminamos el Director, que en la literatura es el que conoce "recetas" fijas de construcción, en el proyecto las peticiones provienen de un cliente React a través de un DTO(CreateActivityDto); el servicio ActivityService es el que asume el rol del Director, llamando a los setters correspondientes en la solicitud HTTP.
+La  diferencia entre el patrón Builder clásico y la adaptación en este proyecto se basa en el propósito y el contexto de su aplicación; en el enfoque clásico el patrón está diseñado para desacoplar la creación de un objeto complejo que requiere múltiples pasos internos(manejando estados intermedios y ensambladores independientes), adaptandola para NestJS y TypeScript  este proceso se simplifica utilizando DTOs para estructurar la entrada de datos, delegando la responsabilidad de orquestación en la capa de servicios (el Director) y conectándose de forma directa con un ORM (Prisma). De esta manera, el patrón se transforma de una estructura rígida a la gestión limpia de la lógica de negocio dentro de una arquitectura web moderna (CRUD).
 
 
