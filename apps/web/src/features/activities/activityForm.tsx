@@ -13,45 +13,40 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
   const [price, setPrice] = useState<number>(0);
   const [capacity, setCapacity] = useState<number>(10);
   const [startDate, setStartDate] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-   event.preventDefault();
-  
-  console.log("1. ¡Se hizo clic y entró a handleSubmit!"); // <--- Añade esto
-  console.log("Valores:", { title, category, city, price, capacity, startDate });
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
 
-  if (!title.trim() || !category.trim()) {
-    console.log("¡Faltan campos obligatorios (Título o Categoría)!");
-    return;
-  }
+    if (!title.trim() || !description.trim() || !category.trim() || !city.trim()) {
+      setError('Completa los campos obligatorios: título, descripción, categoría y ciudad.');
+      return;
+    }
 
-  try {
-    console.log("2. Intentando enviar datos a la API...");
-    const response = await apiPost('/activities', {
-      title,
-      description,
-      category,
-      city,
-      price,
-      capacity,
-      startDate: startDate ? new Date(startDate).toISOString() : undefined,
-    });
-    
-    console.log("3. ¡Guardado exitoso!", response);
+    try {
+      await apiPost('/activities', {
+        title,
+        description,
+        category,
+        city,
+        price,
+        capacity,
+        startDate: startDate ? new Date(startDate).toISOString() : undefined,
+      });
 
-    // Limpiar formulario
-    setTitle('');
-    setDescription('');
-    setCategory('');
-    setPrice(0);
-    setCapacity(10);
-    setStartDate('');
+      setTitle('');
+      setDescription('');
+      setCategory('');
+      setPrice(0);
+      setCapacity(10);
+      setStartDate('');
 
-    onActivityCreated();
-  } catch (err) {
-    console.error('4. Error detallado en la petición:', err);
-    alert('Hubo un error al conectar con el servidor. Revisa la consola.');
-  }
+      onActivityCreated();
+    } catch (err) {
+      console.error('Error al guardar la actividad:', err);
+      setError('Hubo un error al guardar la actividad. Intenta de nuevo.');
+    }
   }
 
   return (
@@ -59,7 +54,9 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
       <h4 className="mb-3">Crear Nueva Actividad</h4>
       <form onSubmit={handleSubmit} className="row g-3">
         <div className="col-md-6">
-          <label className="form-label">Título</label>
+          <label className="form-label">
+            Título <span className="text-danger">*</span>
+          </label>
           <input
             type="text"
             className="form-control"
@@ -69,7 +66,9 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
           />
         </div>
         <div className="col-md-6">
-          <label className="form-label">Categoría</label>
+          <label className="form-label">
+            Categoría <span className="text-danger">*</span>
+          </label>
           <input
             type="text"
             className="form-control"
@@ -80,16 +79,21 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
           />
         </div>
         <div className="col-md-12">
-          <label className="form-label">Descripción</label>
+          <label className="form-label">
+            Descripción <span className="text-danger">*</span>
+          </label>
           <textarea
             className="form-control"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows={2}
+            required
           />
         </div>
         <div className="col-md-4">
-          <label className="form-label">Ciudad</label>
+          <label className="form-label">
+            Ciudad <span className="text-danger">*</span>
+          </label>
           <input
             type="text"
             className="form-control"
@@ -127,6 +131,14 @@ async function handleSubmit(event: FormEvent<HTMLFormElement>) {
             onChange={(e) => setStartDate(e.target.value)}
           />
         </div>
+        {error && (
+          <div className="col-12">
+            <div className="alert alert-danger" role="alert">
+              {error}
+            </div>
+          </div>
+        )}
+
         <div className="col-12 text-end">
           <button type="submit" className="btn btn-primary">
             Guardar Actividad
