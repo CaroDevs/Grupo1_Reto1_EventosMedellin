@@ -1,6 +1,6 @@
 import { clearSessionUser, getSessionToken } from '../auth/session';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_URL = 'http://localhost:3000';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getSessionToken();

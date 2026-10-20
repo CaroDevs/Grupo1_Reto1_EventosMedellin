@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "activities" ADD COLUMN     "capacity" INTEGER NOT NULL DEFAULT 50,
+ADD COLUMN     "price" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "startDate" TEXT,
+ADD COLUMN     "updatedAt" TIMESTAMP(3);
