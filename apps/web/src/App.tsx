@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { NavBar } from './shared/layout/NavBar';
 import { RequireAdmin } from './shared/auth/RequireAdmin';
+import { RequireAdminOrOrganizer } from './shared/auth/RequireAdminOrOrganizer';
 import { ActivitiesPage } from './routes/public/ActivitiesPage';
 import { LoginPage } from './routes/auth/LoginPage';
 import { RegisterPage } from './routes/auth/RegisterPage';
@@ -20,9 +21,9 @@ export function App() {
         <Route
           path="/admin/categories"
           element={
-            <RequireAdmin>
+            <RequireAdminOrOrganizer>
               <CategoriesPage />
-            </RequireAdmin>
+            </RequireAdminOrOrganizer>
           }
         />
 
