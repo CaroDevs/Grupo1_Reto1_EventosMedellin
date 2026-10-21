@@ -1,6 +1,6 @@
 import { clearSessionUser, getSessionToken } from '../auth/session';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const API_URL = 'http://localhost:3000';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getSessionToken();
@@ -38,6 +38,10 @@ export function apiPost<T>(path: string, body: unknown): Promise<T> {
 
 export function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return request<T>(path, { method: 'PATCH', body: JSON.stringify(body) });
+}
+
+export function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return request<T>(path, { method: 'PUT', body: JSON.stringify(body) });
 }
 
 export function apiDelete<T>(path: string): Promise<T> {

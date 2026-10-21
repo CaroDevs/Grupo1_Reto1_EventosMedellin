@@ -12,7 +12,10 @@ export class UserFactory {
 
     try {
       const user = await this.prisma.user.create({
-        data,
+        data: {
+          ...data,
+          password: data.password ?? '', // <--- Esto evita que pase un null si no viene definido
+        },
         include: { role: { select: { name: true } } },
       });
 

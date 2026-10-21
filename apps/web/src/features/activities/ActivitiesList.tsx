@@ -1,18 +1,38 @@
 import { useEffect, useState } from 'react';
-import { apiGet } from '../../shared/http/client';
+import { apiDelete, apiGet } from '../../shared/http/client';
 import type { Activity } from './Activity';
+import { EditActivityModal } from './EditActivityModal';
+import { ConfirmDeleteModal } from '../admin/ConfirmDeleteModal';
+import { useSessionUser } from '../../shared/auth/session';
+import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 
 export function ActivitiesList() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [deletingActivity, setDeletingActivity] = useState<Activity | null>(null);
+  const user = useSessionUser();
+  const canManage = user?.role.name === ADMIN_ROLE || user?.role.name === ORGANIZER_ROLE;
 
-  useEffect(() => {
-    apiGet<Activity[]>('/activities')
+  function loadActivities() {
+    return apiGet<Activity[]>('/activities')
       .then(setActivities)
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    void loadActivities();
   }, []);
+
+  async function handleConfirmDelete() {
+    if (!deletingActivity) return;
+
+    await apiDelete(`/activities/${deletingActivity.id}`);
+    setDeletingActivity(null);
+    await loadActivities();
+  }
 
   if (loading) {
     return (
@@ -37,19 +57,59 @@ export function ActivitiesList() {
   }
 
   return (
-    <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-      {activities.map((activity) => (
-        <div className="col" key={activity.id}>
-          <div className="card h-100 shadow-sm">
-            <div className="card-body">
-              <span className="badge text-bg-primary mb-2">{activity.category}</span>
-              <h5 className="card-title">{activity.title}</h5>
-              <h6 className="card-subtitle mb-2 text-muted">{activity.city}</h6>
-              <p className="card-text">{activity.description}</p>
+    <>
+      <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+        {activities.map((activity) => (
+          <div className="col" key={activity.id}>
+            <div className="card h-100 shadow-sm">
+              <div className="card-body">
+                <span className="badge text-bg-primary mb-2">{activity.category}</span>
+                <h5 className="card-title">{activity.title}</h5>
+                <h6 className="card-subtitle mb-2 text-muted">{activity.city}</h6>
+                <p className="card-text">{activity.description}</p>
+              </div>
+              {canManage && (
+                <div className="card-footer bg-transparent d-flex justify-content-end gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => setEditingActivity(activity)}
+                  >
+                    <i className="fa-solid fa-pen" /> Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => setDeletingActivity(activity)}
+                  >
+                    <i className="fa-solid fa-trash" /> Borrar
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {editingActivity && (
+        <EditActivityModal
+          activity={editingActivity}
+          onClose={() => setEditingActivity(null)}
+          onSaved={() => {
+            setEditingActivity(null);
+            void loadActivities();
+          }}
+        />
+      )}
+
+      {deletingActivity && (
+        <ConfirmDeleteModal
+          name={deletingActivity.title}
+          title="Borrar actividad"
+          onCancel={() => setDeletingActivity(null)}
+          onConfirm={() => void handleConfirmDelete()}
+        />
+      )}
+    </>
   );
 }
