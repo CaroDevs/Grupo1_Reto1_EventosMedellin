@@ -25,9 +25,9 @@ con tres piezas:
 
 | Pieza | Qué hace | Ejemplo en el repo |
 |---|---|---|
-| **Controller** | Recibe la petición HTTP (`GET /activities`) y decide qué responder | [catalog.controller.ts](../../apps/api/src/modules/catalog/catalog.controller.ts) |
-| **Service** | Tiene la lógica de negocio real (buscar, validar, calcular) | [catalog.service.ts](../../apps/api/src/modules/catalog/catalog.service.ts) |
-| **Module** | Conecta el controller y el service entre sí | [catalog.module.ts](../../apps/api/src/modules/catalog/catalog.module.ts) |
+| **Controller** | Recibe la petición HTTP (`GET /categories`) y decide qué responder | [category.controller.ts](../../apps/api/src/modules/Category/category.controller.ts) |
+| **Service** | Tiene la lógica de negocio real (buscar, validar, calcular) | [category.service.ts](../../apps/api/src/modules/Category/category.service.ts) |
+| **Module** | Conecta el controller y el service entre sí | [category.module.ts](../../apps/api/src/modules/Category/category.module.ts) |
 
 Cuando hagas tu CRUD, vas a crear exactamente estos 3 archivos dentro de tu
 propia carpeta en `apps/api/src/modules/<tu-módulo>`, y luego agregar tu

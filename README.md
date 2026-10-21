@@ -24,9 +24,10 @@ Un solo repositorio,  implementa y consume, permitiendo la desincronización ent
 │   │       ├── database/      # PrismaService / PrismaModule
 │   │       ├── events/        # Eventos de dominio / integración
 │   │       └── modules/       # Módulos de negocio (dominio + aplicación)
+│   │           ├── activities/ # CRUD de actividades (con mapa/PostGIS)
 │   │           ├── admin/
 │   │           ├── auth/      # Login (POST /auth/login)
-│   │           ├── catalog/   # Actividades (solo lectura por ahora)
+│   │           ├── Category/  # CRUD de categorías
 │   │           ├── discovery/
 │   │           ├── media/
 │   │           ├── notifications/
@@ -58,9 +59,10 @@ Un solo repositorio,  implementa y consume, permitiendo la desincronización ent
 ```
 
 Las carpetas vacías se preservan con un `.gitkeep`. Los módulos con código
-real hoy son `catalog` (actividades, solo lectura — el ejemplo más simple
-del patrón modular), `user` (CRUD completo de usuarios, con roles) y
-`auth` (login); el resto quedan listas para desarrollarse.
+real hoy son `Category` (CRUD simple — el ejemplo más chico del patrón
+modular), `activities` (CRUD de actividades, con ubicación en mapa vía
+PostGIS), `user` (CRUD completo de usuarios, con roles) y `auth` (login);
+el resto quedan listas para desarrollarse.
 
 ## Cómo levantar el proyecto
 
