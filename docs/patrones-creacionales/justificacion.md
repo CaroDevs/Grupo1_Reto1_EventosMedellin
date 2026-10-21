@@ -99,30 +99,30 @@ classDiagram
 class IActivityBuilder {
         <<interface>>
         +setTitle(title: string)  IActivityBuilder
-        +setDescription(description: string)  IActivityBuilder
+        +setDescription(description?: string)  IActivityBuilder
         +setCategory(category: string)  IActivityBuilder
         +setCity(city: string) IActivityBuilder
-        +setPrice(price: number)  IActivityBuilder
-        +setCapacity(capacity: number)  IActivityBuilder
-        +setStartDate(startDate: string)  IActivityBuilder
+        +setPrice(price?: number)  IActivityBuilder
+        +setCapacity(capacity?: number)  IActivityBuilder
+        +setStartDate(startDate?: string)  IActivityBuilder
         +build()  Activity
     }
 
     class ActivityBuilder {
         -title: string
-        -description: string
+        -description?: string
         -category: string
         -city: string
-        -price: number
-        -capacity: number
-        -startDate: string
+        -price?: number
+        -capacity?: number
+        -startDate?: string
         +setTitle(title: string)  ActivityBuilder
-        +setDescription(description: string)  ActivityBuilder
+        +setDescription(description?: string)  ActivityBuilder
         +setCategory(category: string)  ActivityBuilder
         +setCity(city: string)  ActivityBuilder
-        +setPrice(price: number)  ActivityBuilder
-        +setCapacity(capacity: number)  ActivityBuilder
-        +setStartDate(startDate: string)  ActivityBuilder
+        +setPrice(price?: number)  ActivityBuilder
+        +setCapacity(capacity?: number)  ActivityBuilder
+        +setStartDate(startDate?: string)  ActivityBuilder
         +fromDto(dto: CreateActivityDto)  ActivityBuilder
         +build()  Activity
     }
@@ -132,29 +132,29 @@ class IActivityBuilder {
         +description: string
         +category: string
         +city: string
-        +price: number
-        +capacity: number
-        +startDate: string
+        +price?: number
+        +capacity?: number
+        +startDate?: string
         +createdAt: DateTime
         +updatedAt: DateTime
     }
 
     class ActivityService {
         -prisma: PrismaService
-        +create(createActivityDto: CreateActivityDto)  Promise<Activity>
-        +findAll()  Promise<Activity[]>
-        +findOne(id: string)  Promise<Activity>
-        +update(id: string, updateActivityDto: UpdateActivityDto)  Promise<Activity>
-        +remove(id: string)  Promise<Activity>
+        +create(createActivityDto: CreateActivityDto)  Promise~Activity~
+        +findAll()  Promise~Activity[]~
+        +findOne(id: string)  Promise~Activity~
+        +update(id: string, updateActivityDto: UpdateActivityDto)  Promise~Activity~
+        +remove(id: string)  Promise~Activity~
     }
 
     class ActivityController {
         -activityService: ActivityService
-        +create(createActivityDto: CreateActivityDto)  Promise<Activity>
-        +findAll()  Promise<Activity[]>
-        +findOne(id: string)  Promise<Activity>
-        +update(id: string, updateActivityDto: UpdateActivityDto)  Promise<Activity>
-        +remove(id: string)  Promise<Activity>
+        +create(createActivityDto: CreateActivityDto) Promise~Activity~
+        +findAll() Promise~Activity[]~
+        +findOne(id: string) Promise~Activity~
+        +update(id: string, updateActivityDto: UpdateActivityDto)  Promise~Activity~
+        +remove(id: string)  Promise~Activity~
     }
     IActivityBuilder <|.. ActivityBuilder : "implementa"
     ActivityService --> IActivityBuilder : "utiliza"
