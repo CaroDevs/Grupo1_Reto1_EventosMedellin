@@ -108,7 +108,7 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
             required
           />
         </div>
-        <div className="col-md-4">
+        <div className="col-md-3">
           <label className="form-label">
             Ciudad <span className="text-danger">*</span>
           </label>
@@ -120,7 +120,7 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
             required
           />
         </div>
-        <div className="col-md-4">
+        <div className="col-md-3">
           <label className="form-label">Precio ($)</label>
           <input
             type="number"
@@ -130,7 +130,7 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
             min={0}
           />
         </div>
-        <div className="col-md-4">
+        <div className="col-md-3">
           <label className="form-label">Capacidad</label>
           <input
             type="number"
@@ -140,7 +140,7 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
             min={1}
           />
         </div>
-        <div className="col-md-6">
+        <div className="col-md-3">
           <label className="form-label">Fecha y Hora</label>
           <input
             type="datetime-local"
