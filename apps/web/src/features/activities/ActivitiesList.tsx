@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { apiDelete, apiGet } from '../../shared/http/client';
+import { apiGet } from '../../shared/http/client';
 import type { Activity } from './Activity';
-import { EditActivityModal } from './EditActivityModal';
-import { ConfirmDeleteModal } from '../admin/ConfirmDeleteModal';
+import { useActivityCrud } from './useActivityCrud';
 import { useSessionUser } from '../../shared/auth/session';
 import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 import { formatStartDate } from './formatActivityDate';
@@ -11,8 +10,6 @@ export function ActivitiesList() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [deletingActivity, setDeletingActivity] = useState<Activity | null>(null);
   const user = useSessionUser();
   const canManage = user?.role.name === ADMIN_ROLE || user?.role.name === ORGANIZER_ROLE;
 
@@ -27,17 +24,11 @@ export function ActivitiesList() {
       .finally(() => setLoading(false));
   }
 
+  const { setEditingActivity, setDeletingActivity, modals } = useActivityCrud(loadActivities);
+
   useEffect(() => {
     void loadActivities();
   }, []);
-
-  async function handleConfirmDelete() {
-    if (!deletingActivity) return;
-
-    await apiDelete(`/activities/${deletingActivity.id}`);
-    setDeletingActivity(null);
-    await loadActivities();
-  }
 
   if (loading) {
     return (
@@ -105,25 +96,7 @@ export function ActivitiesList() {
         ))}
       </div>
 
-      {editingActivity && (
-        <EditActivityModal
-          activity={editingActivity}
-          onClose={() => setEditingActivity(null)}
-          onSaved={() => {
-            setEditingActivity(null);
-            void loadActivities();
-          }}
-        />
-      )}
-
-      {deletingActivity && (
-        <ConfirmDeleteModal
-          name={deletingActivity.title}
-          title="Borrar actividad"
-          onCancel={() => setDeletingActivity(null)}
-          onConfirm={() => void handleConfirmDelete()}
-        />
-      )}
+      {modals}
     </>
   );
 }

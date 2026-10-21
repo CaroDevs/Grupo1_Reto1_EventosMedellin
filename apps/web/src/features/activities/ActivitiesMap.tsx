@@ -4,11 +4,10 @@ import L from 'leaflet';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
-import { apiDelete, apiGet } from '../../shared/http/client';
+import { apiGet } from '../../shared/http/client';
 import type { Activity } from './Activity';
-import type { Category } from '../categories/category';
-import { EditActivityModal } from './EditActivityModal';
-import { ConfirmDeleteModal } from '../admin/ConfirmDeleteModal';
+import { useCategories } from '../categories/useCategories';
+import { useActivityCrud } from './useActivityCrud';
 import { useSessionUser } from '../../shared/auth/session';
 import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 import { formatStartDate } from './formatActivityDate';
@@ -31,11 +30,9 @@ export function ActivitiesMap() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [deletingActivity, setDeletingActivity] = useState<Activity | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [fromFilter, setFromFilter] = useState(TODAY);
+  const categories = useCategories();
   const user = useSessionUser();
   const canManage = user?.role.name === ADMIN_ROLE || user?.role.name === ORGANIZER_ROLE;
 
@@ -50,27 +47,13 @@ export function ActivitiesMap() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => {
-    apiGet<Category[]>('/categories')
-      .then((result) =>
-        setCategories([...result].sort((a, b) => a.name.localeCompare(b.name, 'es'))),
-      )
-      .catch((err: unknown) => console.error('No se pudieron cargar las categorías:', err));
-  }, []);
+  const { setEditingActivity, setDeletingActivity, modals } = useActivityCrud(loadActivities);
 
   useEffect(() => {
     setLoading(true);
     void loadActivities();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryFilter, fromFilter]);
-
-  async function handleConfirmDelete() {
-    if (!deletingActivity) return;
-
-    await apiDelete(`/activities/${deletingActivity.id}`);
-    setDeletingActivity(null);
-    await loadActivities();
-  }
 
   const located = activities.filter(
     (activity): activity is Activity & { latitude: number; longitude: number } =>
@@ -187,25 +170,7 @@ export function ActivitiesMap() {
         </>
       )}
 
-      {editingActivity && (
-        <EditActivityModal
-          activity={editingActivity}
-          onClose={() => setEditingActivity(null)}
-          onSaved={() => {
-            setEditingActivity(null);
-            void loadActivities();
-          }}
-        />
-      )}
-
-      {deletingActivity && (
-        <ConfirmDeleteModal
-          name={deletingActivity.title}
-          title="Borrar actividad"
-          onCancel={() => setDeletingActivity(null)}
-          onConfirm={() => void handleConfirmDelete()}
-        />
-      )}
+      {modals}
     </>
   );
 }

@@ -1,6 +1,6 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { apiGet, apiPost } from '../../shared/http/client';
-import type { Category } from '../categories/category';
+import { useState, type FormEvent } from 'react';
+import { apiPost } from '../../shared/http/client';
+import { useCategories } from '../categories/useCategories';
 
 interface ActivitiesFormProps {
   onActivityCreated: () => void;
@@ -10,7 +10,7 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
+  const categories = useCategories();
   const [city, setCity] = useState('Medellín');
   const [price, setPrice] = useState<number>(0);
   const [capacity, setCapacity] = useState<number>(10);
@@ -18,14 +18,6 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    apiGet<Category[]>('/categories')
-      .then((result) =>
-        setCategories([...result].sort((a, b) => a.name.localeCompare(b.name, 'es'))),
-      )
-      .catch((err: unknown) => console.error('No se pudieron cargar las categorías:', err));
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

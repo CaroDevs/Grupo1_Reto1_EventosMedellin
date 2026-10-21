@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { apiGet, apiPut } from '../../shared/http/client';
+import { useState, type FormEvent } from 'react';
+import { apiPut } from '../../shared/http/client';
 import type { Activity } from './Activity';
-import type { Category } from '../categories/category';
+import { useCategories } from '../categories/useCategories';
 
 export function EditActivityModal({
   activity,
@@ -15,7 +15,7 @@ export function EditActivityModal({
   const [title, setTitle] = useState(activity.title);
   const [description, setDescription] = useState(activity.description);
   const [category, setCategory] = useState(activity.category);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const categories = useCategories();
   const [city, setCity] = useState(activity.city);
   const [price, setPrice] = useState<number>(activity.price ?? 0);
   const [capacity, setCapacity] = useState<number>(activity.capacity ?? 10);
@@ -30,14 +30,6 @@ export function EditActivityModal({
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    apiGet<Category[]>('/categories')
-      .then((result) =>
-        setCategories([...result].sort((a, b) => a.name.localeCompare(b.name, 'es'))),
-      )
-      .catch((err: unknown) => console.error('No se pudieron cargar las categorías:', err));
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
