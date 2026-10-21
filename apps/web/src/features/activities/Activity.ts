@@ -8,5 +8,6 @@ export interface Activity {
   capacity?: number;
   startDate?: string;
   createdAt: string;
-  
+  latitude?: number | null;
+  longitude?: number | null;
 }

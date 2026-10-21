@@ -1,4 +1,4 @@
-import {IsString, IsNotEmpty, IsOptional, IsNumber, Min} from 'class-validator';
+import {IsString, IsNotEmpty, IsOptional, IsNumber, Min, IsLatitude, IsLongitude} from 'class-validator';
 
 export class CreateActivityDto{
     @IsString()
@@ -30,5 +30,13 @@ export class CreateActivityDto{
     @IsString()
     @IsOptional()
     startDate?: string;
+
+    @IsLatitude()
+    @IsOptional()
+    latitude?: number;
+
+    @IsLongitude()
+    @IsOptional()
+    longitude?: number;
 
 }
