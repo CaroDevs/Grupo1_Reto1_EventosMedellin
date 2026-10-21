@@ -98,14 +98,14 @@ El Patrón Builder nos permite configurar los atributos de la actividad de maner
 classDiagram
 class IActivityBuilder {
         <<interface>>
-        +setTitle(title: string) : IActivityBuilder
-        +setDescription(description: string) : IActivityBuilder
-        +setCategory(category: string) : IActivityBuilder
-        +setCity(city: string) : IActivityBuilder
-        +setPrice(price: number) : IActivityBuilder
-        +setCapacity(capacity: number) : IActivityBuilder
-        +setStartDate(startDate: string) : IActivityBuilder
-        +build() : Activity
+        +setTitle(title: string)  IActivityBuilder
+        +setDescription(description: string)  IActivityBuilder
+        +setCategory(category: string)  IActivityBuilder
+        +setCity(city: string) IActivityBuilder
+        +setPrice(price: number)  IActivityBuilder
+        +setCapacity(capacity: number)  IActivityBuilder
+        +setStartDate(startDate: string)  IActivityBuilder
+        +build()  Activity
     }
 
     class ActivityBuilder {
@@ -116,15 +116,15 @@ class IActivityBuilder {
         -price: number
         -capacity: number
         -startDate: string
-        +setTitle(title: string) : ActivityBuilder
-        +setDescription(description: string) : ActivityBuilder
-        +setCategory(category: string) : ActivityBuilder
-        +setCity(city: string) : ActivityBuilder
-        +setPrice(price: number) : ActivityBuilder
-        +setCapacity(capacity: number) : ActivityBuilder
-        +setStartDate(startDate: string) : ActivityBuilder
-        +fromDto(dto: CreateActivityDto) : ActivityBuilder
-        +build() : Activity
+        +setTitle(title: string)  ActivityBuilder
+        +setDescription(description: string)  ActivityBuilder
+        +setCategory(category: string)  ActivityBuilder
+        +setCity(city: string)  ActivityBuilder
+        +setPrice(price: number)  ActivityBuilder
+        +setCapacity(capacity: number)  ActivityBuilder
+        +setStartDate(startDate: string)  ActivityBuilder
+        +fromDto(dto: CreateActivityDto)  ActivityBuilder
+        +build()  Activity
     }
 
     class Activity {
@@ -141,20 +141,20 @@ class IActivityBuilder {
 
     class ActivityService {
         -prisma: PrismaService
-        +create(createActivityDto: CreateActivityDto) : Promise<Activity>
-        +findAll() : Promise<Activity[]>
-        +findOne(id: string) : Promise<Activity>
-        +update(id: string, updateActivityDto: UpdateActivityDto) : Promise<Activity>
-        +remove(id: string) : Promise<Activity>
+        +create(createActivityDto: CreateActivityDto)  Promise<Activity>
+        +findAll()  Promise<Activity[]>
+        +findOne(id: string)  Promise<Activity>
+        +update(id: string, updateActivityDto: UpdateActivityDto)  Promise<Activity>
+        +remove(id: string)  Promise<Activity>
     }
 
     class ActivityController {
         -activityService: ActivityService
-        +create(createActivityDto: CreateActivityDto) : Promise<Activity>
-        +findAll() : Promise<Activity[]>
-        +findOne(id: string) : Promise<Activity>
-        +update(id: string, updateActivityDto: UpdateActivityDto) : Promise<Activity>
-        +remove(id: string) : Promise<Activity>
+        +create(createActivityDto: CreateActivityDto)  Promise<Activity>
+        +findAll()  Promise<Activity[]>
+        +findOne(id: string)  Promise<Activity>
+        +update(id: string, updateActivityDto: UpdateActivityDto)  Promise<Activity>
+        +remove(id: string)  Promise<Activity>
     }
     IActivityBuilder <|.. ActivityBuilder : "implementa"
     ActivityService --> IActivityBuilder : "utiliza"
