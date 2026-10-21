@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ActivitiesMap } from '../../features/activities/ActivitiesMap';
+import { ActivitiesList } from '../../features/activities/ActivitiesList';
 import { ActivityForm } from './activityForm';
 import { useSessionUser } from "../../shared/auth/session";
 import { ADMIN_ROLE, ORGANIZER_ROLE } from "@medellin-activities/shared-types";
@@ -31,6 +32,11 @@ export function ActivityPage() {
 
       {/* Mapa con todas las actividades (PostGIS) */}
       <ActivitiesMap key={refreshKey} />
+
+      <hr className="my-4" />
+
+      {/* Listado, ordenado descendentemente por fecha */}
+      <ActivitiesList key={`list-${refreshKey}`} />
     </div>
   );
 }
