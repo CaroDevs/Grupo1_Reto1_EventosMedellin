@@ -1,38 +1,34 @@
 import { useEffect, useState } from 'react';
-import { apiDelete, apiGet } from '../../shared/http/client';
+import { apiGet } from '../../shared/http/client';
 import type { Activity } from './Activity';
-import { EditActivityModal } from './EditActivityModal';
-import { ConfirmDeleteModal } from '../admin/ConfirmDeleteModal';
+import { useActivityCrud } from './useActivityCrud';
 import { useSessionUser } from '../../shared/auth/session';
 import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
+import { formatStartDate } from './formatActivityDate';
 
 export function ActivitiesList() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
-  const [deletingActivity, setDeletingActivity] = useState<Activity | null>(null);
   const user = useSessionUser();
   const canManage = user?.role.name === ADMIN_ROLE || user?.role.name === ORGANIZER_ROLE;
 
   function loadActivities() {
     return apiGet<Activity[]>('/activities')
-      .then(setActivities)
+      .then((result) =>
+        setActivities(
+          [...result].sort((a, b) => (b.startDate ?? '').localeCompare(a.startDate ?? '')),
+        ),
+      )
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
   }
 
+  const { setEditingActivity, setDeletingActivity, modals } = useActivityCrud(loadActivities);
+
   useEffect(() => {
     void loadActivities();
   }, []);
-
-  async function handleConfirmDelete() {
-    if (!deletingActivity) return;
-
-    await apiDelete(`/activities/${deletingActivity.id}`);
-    setDeletingActivity(null);
-    await loadActivities();
-  }
 
   if (loading) {
     return (
@@ -65,8 +61,17 @@ export function ActivitiesList() {
               <div className="card-body">
                 <span className="badge text-bg-primary mb-2">{activity.category}</span>
                 <h5 className="card-title">{activity.title}</h5>
-                <h6 className="card-subtitle mb-2 text-muted">{activity.city}</h6>
                 <p className="card-text">{activity.description}</p>
+                <p className="mb-1 small text-muted">
+                  <i className="fa-solid fa-location-dot me-1" />
+                  {activity.city}
+                </p>
+                {formatStartDate(activity.startDate) && (
+                  <p className="mb-0 small text-muted">
+                    <i className="fa-regular fa-calendar me-1" />
+                    {formatStartDate(activity.startDate)}
+                  </p>
+                )}
               </div>
               {canManage && (
                 <div className="card-footer bg-transparent d-flex justify-content-end gap-2">
@@ -91,25 +96,7 @@ export function ActivitiesList() {
         ))}
       </div>
 
-      {editingActivity && (
-        <EditActivityModal
-          activity={editingActivity}
-          onClose={() => setEditingActivity(null)}
-          onSaved={() => {
-            setEditingActivity(null);
-            void loadActivities();
-          }}
-        />
-      )}
-
-      {deletingActivity && (
-        <ConfirmDeleteModal
-          name={deletingActivity.title}
-          title="Borrar actividad"
-          onCancel={() => setDeletingActivity(null)}
-          onConfirm={() => void handleConfirmDelete()}
-        />
-      )}
+      {modals}
     </>
   );
 }

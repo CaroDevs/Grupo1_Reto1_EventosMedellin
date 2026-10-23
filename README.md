@@ -24,9 +24,10 @@ Un solo repositorio,  implementa y consume, permitiendo la desincronización ent
 │   │       ├── database/      # PrismaService / PrismaModule
 │   │       ├── events/        # Eventos de dominio / integración
 │   │       └── modules/       # Módulos de negocio (dominio + aplicación)
+│   │           ├── activities/ # CRUD de actividades (con mapa/PostGIS)
 │   │           ├── admin/
 │   │           ├── auth/      # Login (POST /auth/login)
-│   │           ├── catalog/   # Actividades (solo lectura por ahora)
+│   │           ├── Category/  # CRUD de categorías
 │   │           ├── discovery/
 │   │           ├── media/
 │   │           ├── notifications/
@@ -58,9 +59,10 @@ Un solo repositorio,  implementa y consume, permitiendo la desincronización ent
 ```
 
 Las carpetas vacías se preservan con un `.gitkeep`. Los módulos con código
-real hoy son `catalog` (actividades, solo lectura — el ejemplo más simple
-del patrón modular), `user` (CRUD completo de usuarios, con roles) y
-`auth` (login); el resto quedan listas para desarrollarse.
+real hoy son `Category` (CRUD simple — el ejemplo más chico del patrón
+modular), `activities` (CRUD de actividades, con ubicación en mapa vía
+PostGIS), `user` (CRUD completo de usuarios, con roles) y `auth` (login);
+el resto quedan listas para desarrollarse.
 
 ## Cómo levantar el proyecto
 
@@ -72,7 +74,7 @@ npm install                 # instala dependencias de api y web (workspaces npm)
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 
-npm run db:up                # levanta Postgres con Docker Compose
+npm run db:up                # levanta Postgres (con PostGIS) con Docker Compose
 npm run db:migrate           # aplica las migraciones de Prisma
 npm run db:seed              # inserta actividades, roles y un usuario admin de prueba
 
@@ -80,8 +82,14 @@ npm run dev                  # corre api (puerto 3000) y web (puerto 5173) junto
 npm run test                 # corre los tests de api y web
 ```
 
+> **Si ya tenías el proyecto levantado de antes:** la imagen de Docker de
+> Postgres cambió (ahora es `postgis/postgis`, con la extensión PostGIS que
+> usa el mapa de actividades). Corre `docker compose -f infra/docker/docker-compose.yml down`
+> y después `npm run db:up` de nuevo para que tome la imagen nueva — tus
+> datos no se pierden, quedan en el mismo volumen.
+
 La API queda en `http://localhost:3000` y el frontend en
-`http://localhost:5173`. Hoy se puede: ver actividades, registrarse e
+`http://localhost:5173`. Hoy se puede: ver actividades en un mapa, registrarse e
 iniciar sesión, y (como admin) listar/crear/editar/borrar usuarios desde
 `/admin/users`. Esto último ya está protegido de verdad con JWT — no
 alcanza con entrar a la URL, el backend rechaza la petición si no

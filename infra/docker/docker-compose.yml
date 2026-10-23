@@ -1,6 +1,9 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # postgis/postgis en vez de postgres:16-alpine: mismo Postgres 16, pero
+    # con la extensión PostGIS ya instalada (la necesitamos para guardar la
+    # ubicación de las actividades y mostrarlas en el mapa).
+    image: postgis/postgis:16-3.4
     container_name: medellin-activities-db
     restart: unless-stopped
     environment:

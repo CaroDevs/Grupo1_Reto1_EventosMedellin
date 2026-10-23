@@ -2,7 +2,8 @@ import { Activity } from "@prisma/client";
 import { ActivityService } from "./activity.service";
 import { CreateActivityDto } from "./dto/create-activity.dto";
 import { UpdateActivityDto } from "./dto/update-activity.dto";
-import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from "@nestjs/common";
+import { FilterActivitiesDto } from "./dto/filter-activities.dto";
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../../common/auth/jwt-auth.guard";
 import { RolesGuard } from "../../common/auth/roles.guard";
 import { Roles } from "../../common/auth/roles.decorator";
@@ -22,8 +23,8 @@ export class ActivityController
     }
 
     @Get() // <--- GET /activities
-    findAll(): Promise<Activity[]> {
-        return this.activityService.findAll();
+    findAll(@Query() filters: FilterActivitiesDto): Promise<Activity[]> {
+        return this.activityService.findAll(filters);
     }
 
     @Get(':id') // <--- GET /activities/:id

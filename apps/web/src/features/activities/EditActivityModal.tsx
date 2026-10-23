@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { apiGet, apiPut } from '../../shared/http/client';
+import { useState, type FormEvent } from 'react';
+import { apiPut } from '../../shared/http/client';
 import type { Activity } from './Activity';
-import type { Category } from '../categories/category';
+import { useCategories } from '../categories/useCategories';
+import { LocationPicker } from './LocationPicker';
 
 export function EditActivityModal({
   activity,
@@ -15,23 +16,21 @@ export function EditActivityModal({
   const [title, setTitle] = useState(activity.title);
   const [description, setDescription] = useState(activity.description);
   const [category, setCategory] = useState(activity.category);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const categories = useCategories();
   const [city, setCity] = useState(activity.city);
   const [price, setPrice] = useState<number>(activity.price ?? 0);
   const [capacity, setCapacity] = useState<number>(activity.capacity ?? 10);
   const [startDate, setStartDate] = useState(
     activity.startDate ? activity.startDate.slice(0, 16) : '',
   );
+  const [latitude, setLatitude] = useState(
+    activity.latitude != null ? String(activity.latitude) : '',
+  );
+  const [longitude, setLongitude] = useState(
+    activity.longitude != null ? String(activity.longitude) : '',
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    apiGet<Category[]>('/categories')
-      .then((result) =>
-        setCategories([...result].sort((a, b) => a.name.localeCompare(b.name, 'es'))),
-      )
-      .catch((err: unknown) => console.error('No se pudieron cargar las categorías:', err));
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,6 +46,8 @@ export function EditActivityModal({
         price,
         capacity,
         startDate: startDate ? new Date(startDate).toISOString() : undefined,
+        latitude: latitude ? Number(latitude) : undefined,
+        longitude: longitude ? Number(longitude) : undefined,
       });
       onSaved();
     } catch (err) {
@@ -171,6 +172,48 @@ export function EditActivityModal({
                     className="form-control"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12">
+                  <label className="form-label">Ubicación (clic en el mapa para marcarla)</label>
+                  <LocationPicker
+                    latitude={latitude}
+                    longitude={longitude}
+                    onChange={(lat, lng) => {
+                      setLatitude(String(lat));
+                      setLongitude(String(lng));
+                    }}
+                  />
+                </div>
+
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="edit-activity-latitude">
+                    Latitud
+                  </label>
+                  <input
+                    id="edit-activity-latitude"
+                    type="number"
+                    step="any"
+                    className="form-control"
+                    value={latitude}
+                    onChange={(e) => setLatitude(e.target.value)}
+                    placeholder="Ej. 6.2442"
+                  />
+                </div>
+
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="edit-activity-longitude">
+                    Longitud
+                  </label>
+                  <input
+                    id="edit-activity-longitude"
+                    type="number"
+                    step="any"
+                    className="form-control"
+                    value={longitude}
+                    onChange={(e) => setLongitude(e.target.value)}
+                    placeholder="Ej. -75.5812"
                   />
                 </div>
 

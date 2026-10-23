@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ActivitiesMap } from '../../features/activities/ActivitiesMap';
 import { ActivitiesList } from '../../features/activities/ActivitiesList';
 import { ActivityForm } from './activityForm';
 import { useSessionUser } from "../../shared/auth/session";
@@ -16,23 +17,26 @@ export function ActivityPage() {
 
   return (
     <div className="container py-4">
-      <h1 className="mb-4">Gestión de Actividades en Medellín</h1>
       {
         canManage && (
-          <> 
-          {/* Formulario de creación conectado al patrón Builder en el backend */}
-          <ActivityForm onActivityCreated={handleActivityCreated} />
-          
-          <hr className="my-4" />
-          
-         
+          <>
+            <h1 className="mb-4">Gestión de Actividades en Medellín</h1>
+            {/* Formulario de creación conectado al patrón Builder en el backend */}
+            <ActivityForm onActivityCreated={handleActivityCreated} />
+
+            <hr className="my-4" />
           </>
         )
-      }     
+      }
       <h3 className="mb-3">Actividades Disponibles</h3>
 
-      {/* Lista de actividades */}
-      <ActivitiesList key={refreshKey} />
+      {/* Mapa con todas las actividades (PostGIS) */}
+      <ActivitiesMap key={refreshKey} />
+
+      <hr className="my-4" />
+
+      {/* Listado, ordenado descendentemente por fecha */}
+      <ActivitiesList key={`list-${refreshKey}`} />
     </div>
   );
 }

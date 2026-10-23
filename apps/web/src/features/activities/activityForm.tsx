@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { apiGet, apiPost } from '../../shared/http/client';
-import type { Category } from '../categories/category';
+import { useState, type FormEvent } from 'react';
+import { apiPost } from '../../shared/http/client';
+import { useCategories } from '../categories/useCategories';
+import { LocationPicker } from './LocationPicker';
 
 interface ActivitiesFormProps {
   onActivityCreated: () => void;
@@ -10,20 +11,14 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [categories, setCategories] = useState<Category[]>([]);
+  const categories = useCategories();
   const [city, setCity] = useState('Medellín');
   const [price, setPrice] = useState<number>(0);
   const [capacity, setCapacity] = useState<number>(10);
   const [startDate, setStartDate] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    apiGet<Category[]>('/categories')
-      .then((result) =>
-        setCategories([...result].sort((a, b) => a.name.localeCompare(b.name, 'es'))),
-      )
-      .catch((err: unknown) => console.error('No se pudieron cargar las categorías:', err));
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,6 +38,8 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
         price,
         capacity,
         startDate: startDate ? new Date(startDate).toISOString() : undefined,
+        latitude: latitude ? Number(latitude) : undefined,
+        longitude: longitude ? Number(longitude) : undefined,
       });
 
       setTitle('');
@@ -51,6 +48,8 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
       setPrice(0);
       setCapacity(10);
       setStartDate('');
+      setLatitude('');
+      setLongitude('');
 
       onActivityCreated();
     } catch (err) {
@@ -148,6 +147,48 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
           />
+        </div>
+        <div className="col-12">
+          <label className="form-label">Ubicación (clic en el mapa para marcarla)</label>
+          <LocationPicker
+            latitude={latitude}
+            longitude={longitude}
+            onChange={(lat, lng) => {
+              setLatitude(String(lat));
+              setLongitude(String(lng));
+            }}
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label" htmlFor="activity-latitude">
+            Latitud
+          </label>
+          <input
+            id="activity-latitude"
+            type="number"
+            step="any"
+            className="form-control"
+            value={latitude}
+            onChange={(e) => setLatitude(e.target.value)}
+            placeholder="Ej. 6.2442"
+          />
+        </div>
+        <div className="col-md-6">
+          <label className="form-label" htmlFor="activity-longitude">
+            Longitud
+          </label>
+          <input
+            id="activity-longitude"
+            type="number"
+            step="any"
+            className="form-control"
+            value={longitude}
+            onChange={(e) => setLongitude(e.target.value)}
+            placeholder="Ej. -75.5812"
+          />
+          <div className="form-text">
+            Opcional — sin esto, la actividad no aparece en el mapa de la página de inicio.
+          </div>
         </div>
         {error && (
           <div className="col-12">

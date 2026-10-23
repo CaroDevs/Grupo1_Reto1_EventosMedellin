@@ -202,7 +202,7 @@ agrega tu módulo a los `imports`:
 import { CategoryModule } from './modules/category/category.module';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, CatalogModule, CategoryModule],
+  imports: [ConfigModule, DatabaseModule, CategoryModule],
 })
 export class AppModule {}
 ```
@@ -535,14 +535,14 @@ de esta guía, arriba.
 
 **Ejemplos reales en el repo, según qué estés buscando:**
 
-- **Lo más simple posible (solo lectura):** módulo `catalog` (backend) +
-  feature `activities` (frontend) — sin crear/editar/borrar, el punto de
-  partida más chico.
+- **CRUD backend más simple, sin relaciones:** módulo `Category` —
+  `create`/`findAll`/`findOne`/`update`/`remove` directos contra un solo
+  modelo, el punto de partida más chico para copiar.
 - **CRUD completo con relaciones:** módulo `user` (backend) — tiene
   `create`/`findAll`/`findOne`/`update`/`remove`, maneja una relación
   (`roleId` → `Role`) y valida contra `packages/shared-types`.
-- **UI completa con modales:** feature `admin` (frontend,
-  `UsersAdminPanel.tsx` + `CreateUserModal.tsx` + `EditUserModal.tsx` +
-  `ConfirmDeleteModal.tsx`) — si tu CRUD necesita crear/editar/borrar con
-  confirmación en vez de la lista simple de esta guía, mejor copiar ese
-  patrón que el de `CategoriesPanel` de arriba.
+- **UI completa con modales:** feature `admin` (`UsersAdminPanel.tsx` +
+  `CreateUserModal.tsx` + `EditUserModal.tsx` + `ConfirmDeleteModal.tsx`)
+  o feature `categories` (mismo patrón) — si tu CRUD necesita
+  crear/editar/borrar con confirmación en vez de la lista simple de esta
+  guía, copia ese patrón.
