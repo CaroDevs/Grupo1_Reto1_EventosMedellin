@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
-import L from 'leaflet';
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import './leafletIconFix';
 import { apiGet } from '../../shared/http/client';
 import type { Activity } from './Activity';
 import { useCategories } from '../categories/useCategories';
@@ -13,16 +10,6 @@ import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 import { formatStartDate } from './formatActivityDate';
 
 const TODAY = new Date().toISOString().slice(0, 10);
-
-// Leaflet referencia sus íconos por defecto con rutas relativas que Vite no
-// resuelve bien al empaquetar — hay que pisar las URLs con los assets ya
-// importados (es el workaround estándar de react-leaflet + Vite/webpack).
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
-});
 
 const MEDELLIN_CENTER: [number, number] = [6.2442, -75.5812];
 
