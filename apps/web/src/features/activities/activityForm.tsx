@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { apiPost } from '../../shared/http/client';
 import { useCategories } from '../categories/useCategories';
+import { LocationPicker } from './LocationPicker';
 
 interface ActivitiesFormProps {
   onActivityCreated: () => void;
@@ -145,6 +146,17 @@ export function ActivityForm({ onActivityCreated }: Readonly<ActivitiesFormProps
             className="form-control"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div className="col-12">
+          <label className="form-label">Ubicación (clic en el mapa para marcarla)</label>
+          <LocationPicker
+            latitude={latitude}
+            longitude={longitude}
+            onChange={(lat, lng) => {
+              setLatitude(String(lat));
+              setLongitude(String(lng));
+            }}
           />
         </div>
         <div className="col-md-6">

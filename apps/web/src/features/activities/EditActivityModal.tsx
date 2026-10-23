@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { apiPut } from '../../shared/http/client';
 import type { Activity } from './Activity';
 import { useCategories } from '../categories/useCategories';
+import { LocationPicker } from './LocationPicker';
 
 export function EditActivityModal({
   activity,
@@ -171,6 +172,18 @@ export function EditActivityModal({
                     className="form-control"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12">
+                  <label className="form-label">Ubicación (clic en el mapa para marcarla)</label>
+                  <LocationPicker
+                    latitude={latitude}
+                    longitude={longitude}
+                    onChange={(lat, lng) => {
+                      setLatitude(String(lat));
+                      setLongitude(String(lng));
+                    }}
                   />
                 </div>
 
