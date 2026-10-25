@@ -62,6 +62,13 @@ export class ActivityService
         );
     }
 
+    // Cuenta TODAS las actividades, sin el filtro de "solo futuras" que usa
+    // findAll() — para el resumen del panel de admin importa el total real.
+    count(): Promise<number>
+    {
+        return this.prisma.activity.count();
+    }
+
     async findOne(id: string): Promise<ActivityWithLocation | null>
     {
         const rows = await this.prisma.$queryRawUnsafe<ActivityWithLocation[]>(

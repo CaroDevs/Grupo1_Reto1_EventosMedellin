@@ -26,6 +26,11 @@ export class CategoryService
   {
     return this.prisma.category.findMany({ orderBy:{ createdAt: 'desc'} });
   }
+
+  count()
+  {
+    return this.prisma.category.count();
+  }
    //Obtener una sola categoría por su ID
   async findOne(id: string) {
     const category = await this.prisma.category.findUnique({ where: { id } });
