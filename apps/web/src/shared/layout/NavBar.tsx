@@ -1,6 +1,8 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { clearSessionUser, useSessionUser } from '../auth/session';
 import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
+import { Blobatar } from "@blobatar/react";
+import "blobatar/motion.css";
 
 export function NavBar() {
   const user = useSessionUser();
@@ -50,12 +52,16 @@ export function NavBar() {
           <ul className="navbar-nav">
             <li className="nav-item dropdown">
               <button
-                className="nav-link dropdown-toggle btn btn-link"
+                className="nav-link dropdown-toggle btn btn-link d-flex align-items-center"
                 type="button"
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                <i className="fa-solid fa-user" />
+                {user ? (
+                  <Blobatar name={user.email} size={40} animate="always" />
+                ) : (
+                  <i className="fa-solid fa-user" />
+                )}
                 {user && <span className="ms-2">{user.name}</span>}
               </button>
 

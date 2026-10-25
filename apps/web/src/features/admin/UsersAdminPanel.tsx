@@ -4,6 +4,8 @@ import type { User } from '../auth/User';
 import { EditUserModal } from './EditUserModal';
 import { CreateUserModal } from './CreateUserModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
+import { Blobatar } from "@blobatar/react";
+import "blobatar/motion.css";
 
 export function UsersAdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
@@ -65,6 +67,7 @@ export function UsersAdminPanel() {
         <table className="table table-striped align-middle">
           <thead>
             <tr>
+              <th>Avatar</th>
               <th>Nombre</th>
               <th>Email</th>
               <th>Rol</th>
@@ -74,6 +77,12 @@ export function UsersAdminPanel() {
           <tbody>
             {users.map((user) => (
               <tr key={user.id}>
+                <td>
+                  <Blobatar
+                    name={user.email}
+                    animate="always"
+                  />
+                </td>
                 <td>{user.name}</td>
                 <td>{user.email}</td>
                 <td>
