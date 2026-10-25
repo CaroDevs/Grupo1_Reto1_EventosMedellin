@@ -39,29 +39,10 @@ export function NavBar() {
               </Link>
             </li>
             {canManage && (
-              <li className="nav-item dropdown">
-                <button
-                  className="nav-link dropdown-toggle btn btn-link"
-                  type="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  Gestionar
-                </button>
-                <ul className="dropdown-menu">
-                  {user?.role.name === ADMIN_ROLE && (
-                    <li>
-                      <Link className="dropdown-item" to="/admin/users">
-                        Usuarios
-                      </Link>
-                    </li>
-                  )}
-                  <li>
-                    <Link className="dropdown-item" to="/admin/categories">
-                      Categorías
-                    </Link>
-                  </li>
-                </ul>
+              <li className="nav-item">
+                <Link className="nav-link" to="/admin">
+                  Panel de administración
+                </Link>
               </li>
             )}
           </ul> 
