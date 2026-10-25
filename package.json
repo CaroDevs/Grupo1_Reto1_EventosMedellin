@@ -31,5 +31,9 @@
     "bcrypt@6.0.0": true,
     "@parcel/watcher@2.6.0": true,
     "unrs-resolver@1.12.2": true
+  },
+  "dependencies": {
+    "@blobatar/react": "^2.7.0",
+    "blobatar": "^2.7.0"
   }
 }

@@ -5,7 +5,8 @@ import { AuthModule } from "../auth/auth.module";
 
 @Module({
   imports: [AuthModule],
-  controllers: [ActivityController], 
+  controllers: [ActivityController],
   providers: [ActivityService],
+  exports: [ActivityService],
 })
 export class ActivitiesModule {}

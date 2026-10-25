@@ -40,6 +40,10 @@ export class UserService {
     });
   }
 
+  count() {
+    return this.prisma.user.count();
+  }
+
   findOne(id: string) {
     return this.prisma.user.findUnique({
       where: { id },

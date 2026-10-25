@@ -7,6 +7,7 @@ import { RegisterPage } from './routes/auth/RegisterPage';
 import { UsersAdminPage } from './routes/admin/UsersAdminPage';
 import { ActivityPage } from './features/activities/activityPage';
 import { CategoriesPage } from './routes/public/categoriesPage';
+import { AdminPanelPage } from './routes/admin/AdminPanelPage';
 
 export function App() {
   return (
@@ -33,6 +34,15 @@ export function App() {
             <RequireAdmin>
               <UsersAdminPage />
             </RequireAdmin>
+          }
+        />
+
+        <Route
+          path="/admin"
+          element={
+            <RequireAdminOrOrganizer>
+              <AdminPanelPage />
+            </RequireAdminOrOrganizer>
           }
         />
       </Routes>
