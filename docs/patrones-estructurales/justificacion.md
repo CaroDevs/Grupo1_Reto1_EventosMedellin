@@ -72,8 +72,7 @@ classDiagram
 
 En el GoF clásico, el Facade suele envolver un subsistema de clases que viven dentro del mismo módulo o archivo. Acá el "subsistema" está formado por tres módulos de NestJS completamente independientes (`UserModule`, `CategoryModule`, `ActivitiesModule`), cada uno con su propio controller, service y DTOs — así que la adaptación al framework consistió en que cada módulo **exporte** su service (`exports: [UserService]`, y lo mismo en los otros dos), y que `AdminModule` los importe para poder inyectarlos en `AdminSummaryService`. Es el mecanismo que NestJS recomienda para compartir providers entre módulos, en vez de, por ejemplo, que el Facade accediera a Prisma directo y reimplementara ahí la lógica de conteo de cada entidad — así `AdminSummaryService` solo orquesta, nunca duplica reglas de negocio que ya le pertenecen a cada subsistema.
 
-## Patrón 2: _(pendiente — lo documenta otro compañero)_
-
+## Patrón 2: 
 ### El problema
 
 ### Por qué resuelve esto
@@ -93,8 +92,7 @@ classDiagram
 
 ### Adaptación al dominio
 
-## Patrón 3: _(pendiente — lo documenta otro compañero)_
-
+## Patrón 3: 
 ### El problema
 
 ### Por qué resuelve esto
