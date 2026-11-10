@@ -140,7 +140,7 @@ classDiagram
     ActivityController --> ActivityService : "usa"
     ActivityService --> ActivityLocationPort : "usa"
     ActivityLocationAdapter ..|> ActivityLocationPort : "implementa"
-    ActivityLocationAdapter --> PrismaService : "delega (SQL PostGIS)"
+    ActivityLocationAdapter --> PrismaService : "delega"
     ActivityLocationPort ..> ActivityWithLocation : "retorna"
 
 
