@@ -98,6 +98,51 @@ Esto resuelve los cuatro problemas:
 
 ```mermaid
 classDiagram
+    class ActivityController {
+        - activityService: ActivityService
+        + create(dto) Promise~Activity~
+        + findAll(filters) Promise~Activity[]~
+        + findOne(id) Promise~Activity~
+        + update(id, dto) Promise~Activity~
+        + remove(id) Promise~Activity~
+    }
+    class ActivityService {
+        - prisma: PrismaService
+        - locationPort: ActivityLocationPort
+        + create(dto) Promise~ActivityWithLocation~
+        + findAll(filters) Promise~ActivityWithLocation[]~
+        + findOne(id) Promise~ActivityWithLocation~
+        + update(id, dto) Promise~ActivityWithLocation~
+        + remove(id) Promise~Activity~
+        + count() Promise~number~
+        - setLocation(id, latitude, longitude) Promise~void~
+    }
+    class ActivityLocationPort {
+        <<abstract>>
+        + findAll(filters) Promise~ActivityWithLocation[]~
+        + findById(id) Promise~ActivityWithLocation~
+        + setCoordinates(id, latitude, longitude) Promise~void~
+    }
+    class ActivityLocationAdapter {
+        - prisma: PrismaService
+        + findAll(filters) Promise~ActivityWithLocation[]~
+        + findById(id) Promise~ActivityWithLocation~
+        + setCoordinates(id, latitude, longitude) Promise~void~
+    }
+    class ActivityWithLocation {
+        + latitude: number
+        + longitude: number
+    }
+    class PrismaService {
+        + $queryRawUnsafe(sql, params) Promise~T~
+        + $executeRawUnsafe(sql, params) Promise~number~
+    }
+    ActivityController --> ActivityService : "usa"
+    ActivityService --> ActivityLocationPort : "usa"
+    ActivityLocationAdapter ..|> ActivityLocationPort : "implementa"
+    ActivityLocationAdapter --> PrismaService : "delega (SQL PostGIS)"
+    ActivityLocationPort ..> ActivityWithLocation : "retorna"
+
 
 ```
 
