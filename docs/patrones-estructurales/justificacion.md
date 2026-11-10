@@ -75,25 +75,24 @@ En el GoF clásico, el Facade suele envolver un subsistema de clases que viven d
 ## Patrón 2: Adapter
 ### El problema
 
-Cada actividad tiene una ubicación en el mapa, en la base de datos se guarda en la columna location, que es de tipo geography(Point, 4326) de PostGIS. Prisma no entiende ese tipo, y por eso prisma.activity.create, findMany o update no pueden leerla ni escribirla.
+Las actividades incluyen una ubicación geográfica almacenada en la columna location de tipo geography(Point, 4326) (PostGIS). Dado que Prisma no cuenta con soporte nativo para este tipo de datos, los métodos estándar de Prisma (create, findMany, update) no pueden leerlo ni escribirlo de forma directa.
 
-Inicialmente el equipo, para solucionar dicho problema agregamos SQL directamente en ActivityService.
-Esto traía cuatro problemas concretos:
+Inicialmente, para resolver este problema, se implementaron consultas SQL directamente dentro de ActivityService. Sin embargo, este enfoque presentaba problemas críticos de arquitectura y mantenibilidad:
 
-1. **El servicio conocía detalles que no le corresponden:** Tenía que saber que ST_MakePoint recibe primero la longitud y luego la latitud, que el sistema de referencia es el 4326 y que hay que castear a geography al escribir y a geometry al leer. Un error en el orden de los parámetros no da error, solo guarda el punto en otro lugar del mapa.
-2. **No se podía probar sin base de datos:** Para probar create o findOne hacía falta una base con PostGIS, porque el SQL estaba pegado a la lógica del servicio.
-3. **El SQL de ubicación se presentaba en diferentes códigos:** Aparecía en findAll, findOne y setLocation, y además repetido en prisma/seed.ts, un cambio en cómo se guarda la ubicación obligaba a editar el servicio.
+1. **Acoplamiento de responsabilidades:** El servicio de negocio conocía detalles de bajo nivel ajenos a su dominio, tales como el orden de los parámetros en ST_MakePoint (longitud antes que latitud), el SRID 4326, y la necesidad de castear explícitamente entre geography al escribir y geometry al leer. Un error en estas consultas no generaba un fallo de compilación, sino errores silenciosos en las coordenadas geográficas.
+2. **Dificultad en las pruebas unitarias:** La inclusión de SQL nativo acoplado a la lógica del servicio impedía realizar pruebas unitarias aisladas, exigiendo una instancia real de base de datos con soporte PostGIS para cualquier prueba de creación o consulta (create/findOne).
+3. **Duplicación de código (DRY):** La lógica SQL para procesar la ubicación se encontraba dispersa en múltiples métodos (findAll, findOne, setLocation) y duplicada en el script de inicialización (prisma/seed.ts), lo que convertía cualquier modificación en el manejo geoespacial en un cambio propenso a errores y de alto impacto.
+
 ### Por qué resuelve esto
 
-El patrón Adapter convierte la interfaz de una clase incompatible en la interfaz que el cliente espera, en este caso, la interfaz incompatible es la de Prisma con SQL y tipos de PostGIS.
-La interfaz que el cliente espera es ActivityLocationPort, el ActivityLocationAdapter hace la traducción y el ActivityService depende únicamente del puerto, así que ya no contiene SQL.
+El patrón Adapter actúa como un traductor especializado entre componentes con interfaces incompatibles. En este caso, nos permite conectar las limitaciones técnicas de Prisma con PostGIS (la interfaz incompatible) hacia un contrato limpio y esperado por el dominio (ActivityLocationPort), logrando que ActivityService interactúe con las ubicaciones sin necesidad de conocer código SQL.
 
-Esto resuelve los cuatro problemas:
+**Resolviendo cuatro problemas:**
+1. **Separación de responsabilidades:** La lógica de negocio queda completamente aislada. Los detalles específicos de PostGIS (orden de parámetros, SRID y casteos) se encapsulan en un único componente (ActivityLocationAdapter).
+2. **Capacidad de pruebas:** ActivityService ahora puede someterse a pruebas unitarias de manera aislada utilizando un mock de ActivityLocationPort, sin necesidad de levantar una base de datos con PostGIS.
+3. **SQL centralizado:** Toda la lógica de consultas espaciales se concentra exclusivamente en el adaptador.
+4. **Bajo acoplamiento y mantenimiento simplificado:** Cualquier modificación futura en la forma de almacenar o procesar las ubicaciones geográficas se limita únicamente al adaptador, dejando intactos el servicio y el controlador.
 
-1. **Responsabilidades separadas:** El servicio solo hace lógica de negocio. Todo lo de PostGIS (orden longitud/latitud, SRID, casteos) vive en un solo archivo.
-2. **Pruebas sin base de datos:** Se puede probar ActivityService con un mock de ActivityLocationPort.
-3. **SQL centralizado:** Las consultas de ubicación están únicamente en el adapter.
-4. **Cambios aislados:** Si cambia la forma de guardar la ubicación, solo se reescribe el adapter, y el servicio y el controlador quedan intactos.
 ### Diagrama UML
 
 ```mermaid
@@ -150,9 +149,23 @@ classDiagram
 
 | Participante GoF | Clase en el dominio | Rol |
 |---|---|---|
-| | | |
+| **Cliente** | `ActivityService` | Contiene la lógica de negocio de las actividades. Solo conoce el puerto y nunca sabe que existe PostGIS. |
+| **Target** | `ActivityLocationPort` | Interfaz que el cliente espera: findAll, findById y setCoordinates, con latitud y longitud como números planos. |
+| **Adapter** | `ActivityLocationAdapter` | Implementa el Target y traduce cada llamada a SQL de PostGIS. |
+| **Adaptee(Servicio)** | `PrismaService` | La pieza con la interfaz incompatible: solo habla SQL crudo y no entiende de coordenadas. |
 
 ### Adaptación al dominio
+
+En el patrón Adapter clásico (GoF), el Target se define como una interfaz. Sin embargo, dado que las interfaces de TypeScript desaparecen en tiempo de compilación y no pueden utilizarse para la inyección de dependencias, ActivityLocationPort se implementó como una clase abstracta registrada en el módulo correspondiente (ActivitiesModule).
+
+**Decisiones de Diseño y Arquitectura**
+    
+1.**Variante de Adaptador de Objetos:** Se optó por la variante de objetos en lugar de la de clases. ActivityLocationAdapter no hereda de PrismaService, sino que lo recibe mediante inyección de dependencias en el constructor y delega las operaciones en él. Esta elección evita la necesidad de herencia múltiple, la cual no es soportada por TypeScript.
+
+2. **Alcance del Adaptador:** El adaptador encapsula únicamente aquellas operaciones complejas que Prisma no resuelve de forma nativa. Por su parte, ActivityService continúa interactuando directamente con PrismaService para los métodos estándar (create, update, remove y count), ya que estos no involucran el manejo de la columna location.
+
+**Limitación**
+Script de Seed (prisma/seed.ts): Este script mantiene su propia lógica SQL para las ubicaciones debido a que se ejecuta fuera del ciclo de vida de NestJS y, por lo tanto, no puede recibir el adaptador mediante inyección de dependencias.
 
 ## Patrón 3: 
 ### El problema
