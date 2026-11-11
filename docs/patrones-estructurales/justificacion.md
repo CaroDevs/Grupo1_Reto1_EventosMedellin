@@ -265,3 +265,6 @@ classDiagram
 1. **Variante de Proxy de Caché:** A diferencia del clásico *Virtual Proxy* (que pospone la creación de un objeto pesado hasta que se necesita) o de un *Protection Proxy* (que verifica permisos de acceso), acá se implementa un **Caching Proxy**. Su objetivo específico es evitar llamadas redundantes a métodos de lectura costosos (`findAll()`) manteniendo una referencia al `RealSubject`.
 2. **Inyección de Dependencias en NestJS:** En lugar de instanciar el servicio real con `new` dentro del proxy, `CachedCategoryService` se define como un `@Injectable()` que recibe a `CategoryService` inyectado en su constructor. En `CategoryModule`, ambos se declaran como providers y el controlador recibe `CachedCategoryService`, respetando el ciclo de vida y la inversión de control de NestJS.
 3. **Invalidación activa de caché ante mutaciones:** Se implementó una política de invalidación explícita: ante cualquier operación que altere el estado (`create`, `update`, `remove`), el proxy delega la escritura al `RealSubject` y reinicia inmediatamente la variable en memoria (`this.cachedCategories = null`). Esto evita que un administrador cree una categoría y no la vea reflejada de inmediato en los selectores del mapa o en el resumen del Facade.
+
+
+
