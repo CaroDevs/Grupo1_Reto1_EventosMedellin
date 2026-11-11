@@ -129,8 +129,8 @@ classDiagram
         + setCoordinates(id, latitude, longitude) Promise~void~
     }
     class ActivityWithLocation {
-        + latitude: number
-        + longitude: number
+        + latitude: number or null
+        + longitude: number or null
     }
     class PrismaService {
         + $queryRawUnsafe(sql, params) Promise~T~
@@ -152,7 +152,7 @@ classDiagram
 | **Cliente** | `ActivityService` | Contiene la lógica de negocio de las actividades. Solo conoce el puerto y nunca sabe que existe PostGIS. |
 | **Target** | `ActivityLocationPort` | Interfaz que el cliente espera: findAll, findById y setCoordinates, con latitud y longitud como números planos. |
 | **Adapter** | `ActivityLocationAdapter` | Implementa el Target y traduce cada llamada a SQL de PostGIS. |
-| **Adaptee(Servicio)** | `PrismaService` | La pieza con la interfaz incompatible: solo habla SQL crudo y no entiende de coordenadas. |
+| **Adaptee (Servicio)** | `PrismaService` | La pieza con la interfaz incompatible: solo habla SQL crudo y no entiende de coordenadas. |
 
 ### Adaptación al dominio
 
@@ -162,6 +162,8 @@ En el patrón Adapter clásico (GoF), el Target se define como una interfaz. Sin
 1. **Variante de Adaptador de Objetos:** Se optó por la variante de objetos en lugar de la de clases. ActivityLocationAdapter no hereda de PrismaService, sino que lo recibe mediante inyección de dependencias en el constructor y delega las operaciones en él. Esta elección evita la necesidad de herencia múltiple, la cual no es soportada por TypeScript.
 
 2. **Alcance del Adaptador:** El adaptador encapsula únicamente aquellas operaciones complejas que Prisma no resuelve de forma nativa. Por su parte, ActivityService continúa interactuando directamente con PrismaService para los métodos estándar (create, update, remove y count), ya que estos no involucran el manejo de la columna location.
+
+3. **Verificación de la capacidad de pruebas:** La ventaja de testabilidad del Adapter (poder probar ActivityService sin levantar una base de datos con PostGIS) se validó con `activity.service.spec.ts`, que mockea `ActivityLocationPort` y cubre create, findAll, findOne y update sin ninguna dependencia real de Prisma ni de la base de datos.
 
 **Limitación**
 Script de Seed (prisma/seed.ts): Este script mantiene su propia lógica SQL para las ubicaciones debido a que se ejecuta fuera del ciclo de vida de NestJS y, por lo tanto, no puede recibir el adaptador mediante inyección de dependencias.
