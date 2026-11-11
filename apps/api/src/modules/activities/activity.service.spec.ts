@@ -20,10 +20,10 @@ describe('ActivityService (uso del Adapter de ubicación)', () => {
     city: 'Medellín',
     price: 0,
     capacity: 50,
-    startDate: new Date('2026-12-01'),
+    startDate: '2026-12-01',
     createdAt: new Date('2026-11-01'),
     updatedAt: new Date('2026-11-01'),
-  } as Activity;
+  };
 
   const withLocation: ActivityWithLocation = {
     ...baseActivity,
