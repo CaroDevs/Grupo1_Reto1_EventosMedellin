@@ -166,6 +166,8 @@ En el patrón Adapter clásico (GoF), el Target se define como una interfaz. Sin
 **Limitación**
 Script de Seed (prisma/seed.ts): Este script mantiene su propia lógica SQL para las ubicaciones debido a que se ejecuta fuera del ciclo de vida de NestJS y, por lo tanto, no puede recibir el adaptador mediante inyección de dependencias.
 
+
+
 ## Patrón 3: Proxy (caché en memoria de categorías)
 
 ### El problema
@@ -188,6 +190,7 @@ Sin una capa intermedia que controle el acceso a estos datos, resolver esto tra�
 El patrón Proxy proporciona un objeto intermedio (`CachedCategoryService`) que tiene la misma interfaz pública que el objeto real (`CategoryService`), interceptando y controlando el acceso hacia él.
 
 El Proxy decide si puede responder de inmediato desde la memoria RAM o si realmente es necesario delegar la consulta a la base de datos:
+
 - Al invocar `findAll()`, el Proxy verifica si ya tiene la lista en memoria y si el tiempo de vida asignado (**TTL - Time-To-Live**, ej. 60 segundos) continúa vigente. Si es válido, retorna la lista en microsegundos sin tocar PostgreSQL.
 - Si la memoria está vacía o el TTL ya expiró, delega la llamada al `CategoryService` real, almacena el resultado retornado y actualiza su marca de tiempo.
 - **Invalidación activa de caché:** Cuando un administrador crea, actualiza o elimina una categoría (`create`, `update`, `remove`), el Proxy intercepta la operación, delega la persistencia al servicio real e **invalida la caché de forma inmediata** (`cachedCategories = null`).
@@ -246,9 +249,7 @@ classDiagram
     AdminSummaryService --> CategoryService : "orquesta (Facade)"
     CachedCategoryService --> CategoryService : "controla acceso y delega (RealSubject)"
     CategoryService --> PrismaService : "consulta DB"
-    
-
-
+```
 
 ### Correspondencia con los participantes del patrón (GoF)
 
@@ -265,6 +266,5 @@ classDiagram
 1. **Variante de Proxy de Caché:** A diferencia del clásico *Virtual Proxy* (que pospone la creación de un objeto pesado hasta que se necesita) o de un *Protection Proxy* (que verifica permisos de acceso), acá se implementa un **Caching Proxy**. Su objetivo específico es evitar llamadas redundantes a métodos de lectura costosos (`findAll()`) manteniendo una referencia al `RealSubject`.
 2. **Inyección de Dependencias en NestJS:** En lugar de instanciar el servicio real con `new` dentro del proxy, `CachedCategoryService` se define como un `@Injectable()` que recibe a `CategoryService` inyectado en su constructor. En `CategoryModule`, ambos se declaran como providers y el controlador recibe `CachedCategoryService`, respetando el ciclo de vida y la inversión de control de NestJS.
 3. **Invalidación activa de caché ante mutaciones:** Se implementó una política de invalidación explícita: ante cualquier operación que altere el estado (`create`, `update`, `remove`), el proxy delega la escritura al `RealSubject` y reinicia inmediatamente la variable en memoria (`this.cachedCategories = null`). Esto evita que un administrador cree una categoría y no la vea reflejada de inmediato en los selectores del mapa o en el resumen del Facade.
-
 
 
