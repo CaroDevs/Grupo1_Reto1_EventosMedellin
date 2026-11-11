@@ -163,7 +163,7 @@ En el patrón Adapter clásico (GoF), el Target se define como una interfaz. Sin
 
 2. **Alcance del Adaptador:** El adaptador encapsula únicamente aquellas operaciones complejas que Prisma no resuelve de forma nativa. Por su parte, ActivityService continúa interactuando directamente con PrismaService para los métodos estándar (create, update, remove y count), ya que estos no involucran el manejo de la columna location.
 
-3. **Verificación de la capacidad de pruebas:** La ventaja de testabilidad del Adapter (poder probar ActivityService sin levantar una base de datos con PostGIS) se validó con `activity.service.spec.ts`, que mockea `ActivityLocationPort` y cubre create, findAll, findOne y update sin ninguna dependencia real de Prisma ni de la base de datos.
+3. **Verificación de la capacidad de pruebas:** La ventaja de testabilidad del Adapter (poder probar ActivityService sin levantar una base de datos con PostGIS) se validó con `activity.service.spec.ts`, que mockea `ActivityLocationPort` y cubre create, findAll, findOne, update, remove y count sin ninguna dependencia real de Prisma ni de la base de datos.
 
 **Limitación**
 Script de Seed (prisma/seed.ts): Este script mantiene su propia lógica SQL para las ubicaciones debido a que se ejecuta fuera del ciclo de vida de NestJS y, por lo tanto, no puede recibir el adaptador mediante inyección de dependencias.
