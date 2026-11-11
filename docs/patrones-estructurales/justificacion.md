@@ -201,8 +201,18 @@ Esto resuelve los tres problemas de arriba: las consultas frecuentes no tocan Po
 
 ```mermaid
 classDiagram
+    class ICategoryService {
+        <<interface>>
+        + findAll() Promise~Category[]~
+        + count() Promise~number~
+        + findOne(id) Promise~Category~
+        + create(dto) Promise~Category~
+        + update(id, dto) Promise~Category~
+        + remove(id) Promise~Category~
+    }
+
     class CategoryController {
-        - categoryService: CachedCategoryService
+        - categoryService: ICategoryService
         + findAll() Promise~Category[]~
         + findOne(id) Promise~Category~
         + create(dto) Promise~Category~
@@ -245,9 +255,11 @@ classDiagram
         + category
     }
 
-    CategoryController --> CachedCategoryService : "usa (Proxy)"
-    AdminSummaryService --> CategoryService : "orquesta (Facade)"
-    CachedCategoryService --> CategoryService : "controla acceso y delega (RealSubject)"
+    CategoryController --> ICategoryService : "depende de la abstracción (vía token CATEGORY_SERVICE)"
+    ICategoryService <|.. CachedCategoryService : "implementa (Proxy)"
+    ICategoryService <|.. CategoryService : "implementa (RealSubject)"
+    AdminSummaryService --> CategoryService : "orquesta (Facade, clase concreta)"
+    CachedCategoryService --> CategoryService : "controla acceso y delega"
     CategoryService --> PrismaService : "consulta DB"
 ```
 
@@ -255,16 +267,17 @@ classDiagram
 
 | Participante GoF | Clase en el dominio | Rol |
 | --- | --- | --- |
-| **Proxy** | `CachedCategoryService` | Mantiene la misma interfaz pública que el servicio real, controla el acceso a `findAll()` decidiendo si responde desde memoria con TTL o consulta a la base de datos, e invalida la memoria ante operaciones de escritura. |
-| **Subject** | Interfaz pública de `CategoryService` | Define el contrato común que el cliente espera para interactuar con las categorías, permitiendo sustituir el servicio real por el proxy sin alterar a quienes lo consumen. |
-| **RealSubject** | `CategoryService` | El servicio original que realiza el trabajo directo contra la base de datos a través de `PrismaService`. |
-| **Cliente** | `CategoryController` (y a nivel superior `ActivitiesMap`, formularios de actividad y `CategoriesPanel`) | Interactúa con el Proxy de manera transparente, creyendo que habla con el servicio habitual pero beneficiándose del caché en memoria. |
-| **Cliente / Orquestador** | `AdminSummaryService` (el Facade) | Consume el subsistema de categorías para su conteo (`count()`), beneficiándose de la consistencia de datos que el proxy garantiza tras cada invalidación. |
+| **Subject** | `ICategoryService` | Interfaz real (no solo conceptual) que declara el contrato común — `findAll`, `findOne`, `create`, `update`, `remove`, `count`. Es lo que hace posible que el cliente no necesite saber si habla con el proxy o con el servicio real. |
+| **Proxy** | `CachedCategoryService` | Implementa `ICategoryService`; controla el acceso a `findAll()` decidiendo si responde desde memoria con TTL o consulta a la base de datos, e invalida la memoria ante operaciones de escritura. |
+| **RealSubject** | `CategoryService` | También implementa `ICategoryService`; el servicio original que realiza el trabajo directo contra la base de datos a través de `PrismaService`. |
+| **Cliente** | `CategoryController` (y a nivel superior `ActivitiesMap`, formularios de actividad y `CategoriesPanel`) | Depende únicamente de `ICategoryService` (inyectada vía el token `CATEGORY_SERVICE`) — nunca menciona `CachedCategoryService` por su nombre, así que no tiene forma de notar si habla con el proxy o con el real. |
+| **Cliente / Orquestador** | `AdminSummaryService` (el Facade) | Caso particular: a este consumidor sí le conviene inyectar `CategoryService` concreto (no el proxy), porque es un conteo administrativo que debe reflejar siempre el dato más fresco de la base de datos, sin pasar por la caché. |
 
 ### Adaptación al dominio
 
 1. **Variante de Proxy de Caché:** A diferencia del clásico *Virtual Proxy* (que pospone la creación de un objeto pesado hasta que se necesita) o de un *Protection Proxy* (que verifica permisos de acceso), acá se implementa un **Caching Proxy**. Su objetivo específico es evitar llamadas redundantes a métodos de lectura costosos (`findAll()`) manteniendo una referencia al `RealSubject`.
-2. **Inyección de Dependencias en NestJS:** En lugar de instanciar el servicio real con `new` dentro del proxy, `CachedCategoryService` se define como un `@Injectable()` que recibe a `CategoryService` inyectado en su constructor. En `CategoryModule`, ambos se declaran como providers y el controlador recibe `CachedCategoryService`, respetando el ciclo de vida y la inversión de control de NestJS.
-3. **Invalidación activa de caché ante mutaciones:** Se implementó una política de invalidación explícita: ante cualquier operación que altere el estado (`create`, `update`, `remove`), el proxy delega la escritura al `RealSubject` y reinicia inmediatamente la variable en memoria (`this.cachedCategories = null`). Esto evita que un administrador cree una categoría y no la vea reflejada de inmediato en los selectores del mapa o en el resumen del Facade.
+2. **Inyección de Dependencias en NestJS, por abstracción:** `CategoryController` no depende de `CachedCategoryService` por su clase concreta, sino de la interfaz `ICategoryService` — pero TypeScript borra las interfaces al compilar, así que no sirven como token de inyección por sí solas. La solución (el mismo mecanismo que ya se usa en `AuthService`/`GoogleTokenVerifier` para el login con Google) es un *injection token* explícito: un `Symbol` (`CATEGORY_SERVICE`) que `CategoryModule` enlaza a la implementación real (`{ provide: CATEGORY_SERVICE, useClass: CachedCategoryService }`), e inyectar con `@Inject(CATEGORY_SERVICE)`. Si el equipo alguna vez quisiera apagar la caché, el cambio es una línea en el módulo, no tocar el controller.
+3. **El TTL no es un parámetro del constructor:** la primera versión recibía `ttlSeconds` como segundo argumento del constructor con un valor por defecto (`= 60`). Eso rompía el arranque de la aplicación: NestJS intenta inyectar *todos* los parámetros del constructor por tipo, sin excepción para los que tengan un valor por defecto, y no existe ningún provider que resuelva un `number` suelto. El TTL quedó como una constante interna de la clase en su lugar.
+4. **Invalidación activa de caché ante mutaciones:** Se implementó una política de invalidación explícita: ante cualquier operación que altere el estado (`create`, `update`, `remove`), el proxy delega la escritura al `RealSubject` y reinicia inmediatamente la variable en memoria (`this.cachedCategories = null`). Esto evita que un administrador cree una categoría y no la vea reflejada de inmediato en los selectores del mapa o en el resumen del Facade.
 
 
