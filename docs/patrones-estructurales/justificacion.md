@@ -187,7 +187,7 @@ Sin una capa intermedia que controle el acceso a estos datos, resolver esto tra�
 
 ### Por qué Proxy resuelve esto
 
-El patrón Proxy proporciona un objeto intermedio (`CachedCategoryService`) que tiene la misma interfaz pública que el objeto real (`CategoryService`), interceptando y controlando el acceso hacia él.
+El patrón Proxy proporciona un objeto intermedio (`CachedCategoryService`) que implementa la misma interfaz (`ICategoryService`) que el objeto real (`CategoryService`), interceptando y controlando el acceso hacia él.
 
 El Proxy decide si puede responder de inmediato desde la memoria RAM o si realmente es necesario delegar la consulta a la base de datos:
 
