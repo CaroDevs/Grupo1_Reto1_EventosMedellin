@@ -3,6 +3,7 @@ import { Category } from '@prisma/client';
 import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { ICategoryService } from './category-service.interface';
 
 // Cuánto tiempo (ms) se confía en la caché antes de volver a consultar la
 // base de datos. Fijo a propósito: NestJS intenta inyectar TODOS los
@@ -21,7 +22,7 @@ const DEFAULT_TTL_MS = 60_000;
  * Ante cualquier operación de mutación (create, update, remove), invalida la caché de inmediato.
  */
 @Injectable()
-export class CachedCategoryService {
+export class CachedCategoryService implements ICategoryService {
   private cachedCategories: Category[] | null = null;
   private lastFetchTime = 0;
   private readonly ttlMs = DEFAULT_TTL_MS;

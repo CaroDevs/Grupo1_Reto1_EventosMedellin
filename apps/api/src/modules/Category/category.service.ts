@@ -3,9 +3,10 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
+import { ICategoryService } from "./category-service.interface";
 
 @Injectable()
-export class CategoryService
+export class CategoryService implements ICategoryService
 {
   constructor(private readonly prisma: PrismaService){}
   // 1. Crear una categoría
