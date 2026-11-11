@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
-import { CategoryService } from './category.service';
+import { CachedCategoryService } from './cached-category.service';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { RolesGuard } from '../../common/auth/roles.guard';
 import { Roles } from '../../common/auth/roles.decorator';
@@ -9,7 +9,7 @@ import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 
 @Controller('categories')
 export class CategoryController {
-  constructor(private readonly categoryService: CategoryService) {}
+  constructor(private readonly categoryService: CachedCategoryService) {}
 
   //POST: Crear categoría
   @Post()
