@@ -4,6 +4,14 @@ import { CategoryService } from './category.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
+// Cuánto tiempo (ms) se confía en la caché antes de volver a consultar la
+// base de datos. Fijo a propósito: NestJS intenta inyectar TODOS los
+// parámetros del constructor por tipo, sin excepción para los que tengan
+// un valor por defecto — un segundo parámetro `ttlSeconds = 60` rompía el
+// arranque de la app porque no hay ningún provider que resuelva un `number`
+// suelto (UnknownDependenciesException).
+const DEFAULT_TTL_MS = 60_000;
+
 /**
  * Proxy — Caché en memoria de categorías.
  *
@@ -16,14 +24,9 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 export class CachedCategoryService {
   private cachedCategories: Category[] | null = null;
   private lastFetchTime = 0;
-  private readonly ttlMs: number;
+  private readonly ttlMs = DEFAULT_TTL_MS;
 
-  constructor(
-    private readonly realCategoryService: CategoryService,
-    ttlSeconds = 60,
-  ) {
-    this.ttlMs = ttlSeconds * 1000;
-  }
+  constructor(private readonly realCategoryService: CategoryService) {}
 
   async findAll(): Promise<Category[]> {
     const now = Date.now();

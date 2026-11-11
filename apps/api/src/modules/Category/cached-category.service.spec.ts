@@ -44,8 +44,9 @@ describe('CachedCategoryService (Proxy Pattern)', () => {
       remove: jest.fn().mockResolvedValue(mockCategories[0]),
     } as unknown as jest.Mocked<CategoryService>;
 
-    // Proxy con TTL de 60 segundos
-    cachedCategoryService = new CachedCategoryService(realCategoryService, 60);
+    // El TTL ya no es un parámetro del constructor (ver cached-category.service.ts)
+    // — queda fijo en 60s adentro de la clase, los tests de abajo asumen ese valor.
+    cachedCategoryService = new CachedCategoryService(realCategoryService);
   });
 
   describe('findAll (Caché con TTL)', () => {
