@@ -20,7 +20,7 @@ model Activity {
 
   // Columna PostGIS. Prisma no puede leer/escribir geometrías directo por
   // Client (por eso Unsupported), así que latitud/longitud se leen y
-  // escriben con SQL crudo en ActivityService — ver findAll/findOne/create/update.
+  // escriben con SQL crudo en ActivityLocationAdapter — ver findAll/findOne/create/update.
   location Unsupported("geography(Point, 4326)")?
 
   @@map("activities")
