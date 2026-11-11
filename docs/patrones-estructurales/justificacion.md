@@ -166,3 +166,102 @@ En el patrón Adapter clásico (GoF), el Target se define como una interfaz. Sin
 **Limitación**
 Script de Seed (prisma/seed.ts): Este script mantiene su propia lógica SQL para las ubicaciones debido a que se ejecuta fuera del ciclo de vida de NestJS y, por lo tanto, no puede recibir el adaptador mediante inyección de dependencias.
 
+## Patrón 3: Proxy (caché en memoria de categorías)
+
+### El problema
+
+Las categorías representan datos maestros de la aplicación (ej. *Deportes*, *Música*, *Cultura*, *Gastronomía*) que se modifican muy rara vez, pero cuyo consumo es permanente y masivo a lo largo de casi todos los flujos de la plataforma:
+
+1. **Filtro del mapa de actividades (`ActivitiesMap`):** Cada vez que un usuario entra al mapa principal, el frontend consulta `GET /categories` para poblar el menú desplegable de filtros.
+2. **Formularios de actividades (`activityForm` y `EditActivityModal`):** Al crear o editar cualquier actividad, se vuelve a consultar `GET /categories` para armar el `<select>` correspondiente.
+3. **Panel de administración (`CategoriesPanel`):** Cada apertura de la sección de categorías vuelve a disparar la petición completa de la lista.
+4. **Resumen del panel de administración (el Facade `AdminSummaryService`):** Consulta periódicamente el subsistema de categorías para conocer el estado y conteo de la plataforma.
+
+Sin una capa intermedia que controle el acceso a estos datos, resolver esto traía tres problemas concretos:
+
+1. **Consultas redundantes a la base de datos (I/O innecesario):** Cada llamada a `GET /categories` ejecutaba físicamente `this.prisma.category.findMany()` contra PostgreSQL para traer exactamente los mismos registros una y otra vez, consumiendo conexiones y recursos del motor relacional en lecturas de datos estáticos.
+2. **Latencia innecesaria en vistas de alto tráfico:** Componentes visuales críticos como el mapa de eventos se veían obligados a esperar la resolución de la consulta a la base de datos para pintar un simple selector de texto, degradando el tiempo de respuesta percibido por el usuario.
+3. **Violación de responsabilidad única si se mezclaba la caché en el servicio de negocio:** Si `CategoryService` gestionara internamente variables de caché en memoria, marcas de tiempo y políticas de expiración, estaría mezclando su responsabilidad esencial (reglas de negocio y persistencia en Prisma) con una preocupación técnica de infraestructura (optimización de acceso y almacenamiento temporal).
+
+### Por qué Proxy resuelve esto
+
+El patrón Proxy proporciona un objeto intermedio (`CachedCategoryService`) que tiene la misma interfaz pública que el objeto real (`CategoryService`), interceptando y controlando el acceso hacia él.
+
+El Proxy decide si puede responder de inmediato desde la memoria RAM o si realmente es necesario delegar la consulta a la base de datos:
+- Al invocar `findAll()`, el Proxy verifica si ya tiene la lista en memoria y si el tiempo de vida asignado (**TTL - Time-To-Live**, ej. 60 segundos) continúa vigente. Si es válido, retorna la lista en microsegundos sin tocar PostgreSQL.
+- Si la memoria está vacía o el TTL ya expiró, delega la llamada al `CategoryService` real, almacena el resultado retornado y actualiza su marca de tiempo.
+- **Invalidación activa de caché:** Cuando un administrador crea, actualiza o elimina una categoría (`create`, `update`, `remove`), el Proxy intercepta la operación, delega la persistencia al servicio real e **invalida la caché de forma inmediata** (`cachedCategories = null`).
+
+Esto resuelve los tres problemas de arriba: las consultas frecuentes no tocan PostgreSQL, las vistas del frontend responden al instante, y `CategoryService` se mantiene limpio sin saber que existe una política de caché por delante. Además, la invalidación inmediata asegura que ni el Facade (`AdminSummaryService`) ni los formularios queden mostrando datos obsoletos (*stale data*).
+
+### Diagrama UML
+
+```mermaid
+classDiagram
+    class CategoryController {
+        - categoryService: CachedCategoryService
+        + findAll() Promise~Category[]~
+        + findOne(id) Promise~Category~
+        + create(dto) Promise~Category~
+        + update(id, dto) Promise~Category~
+        + remove(id) Promise~Category~
+    }
+
+    class AdminSummaryService {
+        - userService: UserService
+        - categoryService: CategoryService
+        - activityService: ActivityService
+        + getSummary() Promise~AdminSummary~
+    }
+
+    class CachedCategoryService {
+        - realCategoryService: CategoryService
+        - cachedCategories: Category[] | null
+        - lastFetchTime: number
+        - ttlMs: number
+        + findAll() Promise~Category[]~
+        + count() Promise~number~
+        + findOne(id) Promise~Category~
+        + create(dto) Promise~Category~
+        + update(id, dto) Promise~Category~
+        + remove(id) Promise~Category~
+        - invalidateCache() void
+    }
+
+    class CategoryService {
+        - prisma: PrismaService
+        + findAll() Promise~Category[]~
+        + count() Promise~number~
+        + findOne(id) Promise~Category~
+        + create(dto) Promise~Category~
+        + update(id, dto) Promise~Category~
+        + remove(id) Promise~Category~
+    }
+
+    class PrismaService {
+        + category
+    }
+
+    CategoryController --> CachedCategoryService : "usa (Proxy)"
+    AdminSummaryService --> CategoryService : "orquesta (Facade)"
+    CachedCategoryService --> CategoryService : "controla acceso y delega (RealSubject)"
+    CategoryService --> PrismaService : "consulta DB"
+    
+
+
+
+### Correspondencia con los participantes del patrón (GoF)
+
+| Participante GoF | Clase en el dominio | Rol |
+| --- | --- | --- |
+| **Proxy** | `CachedCategoryService` | Mantiene la misma interfaz pública que el servicio real, controla el acceso a `findAll()` decidiendo si responde desde memoria con TTL o consulta a la base de datos, e invalida la memoria ante operaciones de escritura. |
+| **Subject** | Interfaz pública de `CategoryService` | Define el contrato común que el cliente espera para interactuar con las categorías, permitiendo sustituir el servicio real por el proxy sin alterar a quienes lo consumen. |
+| **RealSubject** | `CategoryService` | El servicio original que realiza el trabajo directo contra la base de datos a través de `PrismaService`. |
+| **Cliente** | `CategoryController` (y a nivel superior `ActivitiesMap`, formularios de actividad y `CategoriesPanel`) | Interactúa con el Proxy de manera transparente, creyendo que habla con el servicio habitual pero beneficiándose del caché en memoria. |
+| **Cliente / Orquestador** | `AdminSummaryService` (el Facade) | Consume el subsistema de categorías para su conteo (`count()`), beneficiándose de la consistencia de datos que el proxy garantiza tras cada invalidación. |
+
+### Adaptación al dominio
+
+1. **Variante de Proxy de Caché:** A diferencia del clásico *Virtual Proxy* (que pospone la creación de un objeto pesado hasta que se necesita) o de un *Protection Proxy* (que verifica permisos de acceso), acá se implementa un **Caching Proxy**. Su objetivo específico es evitar llamadas redundantes a métodos de lectura costosos (`findAll()`) manteniendo una referencia al `RealSubject`.
+2. **Inyección de Dependencias en NestJS:** En lugar de instanciar el servicio real con `new` dentro del proxy, `CachedCategoryService` se define como un `@Injectable()` que recibe a `CategoryService` inyectado en su constructor. En `CategoryModule`, ambos se declaran como providers y el controlador recibe `CachedCategoryService`, respetando el ciclo de vida y la inversión de control de NestJS.
+3. **Invalidación activa de caché ante mutaciones:** Se implementó una política de invalidación explícita: ante cualquier operación que altere el estado (`create`, `update`, `remove`), el proxy delega la escritura al `RealSubject` y reinicia inmediatamente la variable en memoria (`this.cachedCategories = null`). Esto evita que un administrador cree una categoría y no la vea reflejada de inmediato en los selectores del mapa o en el resumen del Facade.
