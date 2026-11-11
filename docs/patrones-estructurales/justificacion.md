@@ -166,22 +166,3 @@ En el patrón Adapter clásico (GoF), el Target se define como una interfaz. Sin
 **Limitación**
 Script de Seed (prisma/seed.ts): Este script mantiene su propia lógica SQL para las ubicaciones debido a que se ejecuta fuera del ciclo de vida de NestJS y, por lo tanto, no puede recibir el adaptador mediante inyección de dependencias.
 
-## Patrón 3: 
-### El problema
-
-### Por qué resuelve esto
-
-### Diagrama UML
-
-```mermaid
-classDiagram
-
-```
-
-### Correspondencia con los participantes del patrón (GoF)
-
-| Participante GoF | Clase en el dominio | Rol |
-|---|---|---|
-| | | |
-
-### Adaptación al dominio
