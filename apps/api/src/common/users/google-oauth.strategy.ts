@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DEFAULT_ROLE } from '@medellin-activities/shared-types';
 import { PrismaService } from '../../database/prisma.service';
-import type { BuiltUserData, UserCreationStrategy } from './user-creation-strategy';
+import { UserCreationTemplate } from './user-creation.template';
 
 export interface GoogleOAuthInput {
   email: string;
@@ -13,20 +13,24 @@ export interface GoogleOAuthInput {
  * escribió una) — siempre rol User, igual que el registro normal.
  */
 @Injectable()
-export class GoogleOAuthStrategy implements UserCreationStrategy<GoogleOAuthInput> {
-  constructor(private readonly prisma: PrismaService) {}
+export class GoogleOAuthStrategy extends UserCreationTemplate<GoogleOAuthInput> {
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
-  async buildUserData(input: GoogleOAuthInput): Promise<BuiltUserData> {
-    const role = await this.prisma.role.findUnique({ where: { name: DEFAULT_ROLE } });
-    if (!role) {
-      throw new NotFoundException(`El rol "${DEFAULT_ROLE}" no existe. ¿Corriste el seed?`);
-    }
+  protected resolveRoleId(): Promise<string> {
+    return this.findRoleIdByName(DEFAULT_ROLE);
+  }
 
-    return {
-      name: input.name ?? input.email,
-      email: input.email,
-      password: null,
-      roleId: role.id,
-    };
+  protected resolvePassword(): Promise<null> {
+    return Promise.resolve(null);
+  }
+
+  protected resolveName(input: GoogleOAuthInput): string {
+    return input.name ?? input.email;
+  }
+
+  protected resolveEmail(input: GoogleOAuthInput): string {
+    return input.email;
   }
 }

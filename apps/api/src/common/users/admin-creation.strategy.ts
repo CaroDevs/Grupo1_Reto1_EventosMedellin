@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import type { RoleName } from '@medellin-activities/shared-types';
 import { PrismaService } from '../../database/prisma.service';
-import type { BuiltUserData, UserCreationStrategy } from './user-creation-strategy';
+import { UserCreationTemplate } from './user-creation.template';
 
 export interface AdminCreationInput {
   name: string;
@@ -18,20 +18,24 @@ export interface AdminCreationInput {
  * JwtAuthGuard + RolesGuard(Admin).
  */
 @Injectable()
-export class AdminCreationStrategy implements UserCreationStrategy<AdminCreationInput> {
-  constructor(private readonly prisma: PrismaService) {}
+export class AdminCreationStrategy extends UserCreationTemplate<AdminCreationInput> {
+  constructor(prisma: PrismaService) {
+    super(prisma);
+  }
 
-  async buildUserData(input: AdminCreationInput): Promise<BuiltUserData> {
-    const role = await this.prisma.role.findUnique({ where: { name: input.role } });
-    if (!role) {
-      throw new NotFoundException(`El rol "${input.role}" no existe`);
-    }
+  protected resolveRoleId(input: AdminCreationInput): Promise<string> {
+    return this.findRoleIdByName(input.role);
+  }
 
-    return {
-      name: input.name,
-      email: input.email,
-      password: await bcrypt.hash(input.password, 10),
-      roleId: role.id,
-    };
+  protected resolvePassword(input: AdminCreationInput): Promise<string> {
+    return bcrypt.hash(input.password, 10);
+  }
+
+  protected resolveName(input: AdminCreationInput): string {
+    return input.name;
+  }
+
+  protected resolveEmail(input: AdminCreationInput): string {
+    return input.email;
   }
 }
