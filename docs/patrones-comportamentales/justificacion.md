@@ -27,6 +27,8 @@ Esto resuelve el problema concreto de arriba: la lógica de "buscar rol y valida
 
 ```mermaid
 classDiagram
+    direction TB
+
     class UserCreationTemplate~TInput~ {
         <<abstract>>
         #prisma: PrismaService
@@ -37,6 +39,8 @@ classDiagram
         #resolveEmail(input: TInput) string
         #findRoleIdByName(roleName: string) Promise~string~
     }
+
+    note for UserCreationTemplate "buildUserData() es el método plantilla: fijo, ninguna subclase lo sobreescribe.\nLos demás son los pasos que varían (abstractos) o se comparten (findRoleIdByName)."
 
     class RegistrationStrategy {
         #resolveRoleId() Promise~string~
@@ -68,6 +72,9 @@ classDiagram
     UserCreationTemplate <|-- GoogleOAuthStrategy : hereda
     UserCreationTemplate <|-- AdminCreationStrategy : hereda
     UserFactory ..> UserCreationTemplate : usa (vía UserCreationStrategy)
+
+    classDef abstractClass stroke:#d4a017,stroke-width:3px
+    class UserCreationTemplate:::abstractClass
 ```
 
 ### Correspondencia con los participantes del patrón (GoF)
