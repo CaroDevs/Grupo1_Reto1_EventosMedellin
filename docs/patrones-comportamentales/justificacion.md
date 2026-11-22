@@ -40,7 +40,7 @@ classDiagram
         #findRoleIdByName(roleName: string) Promise~string~
     }
 
-    note for UserCreationTemplate "buildUserData() es el método plantilla: fijo, ninguna subclase lo sobreescribe.\nLos demás son los pasos que varían (abstractos) o se comparten (findRoleIdByName)."
+    note for UserCreationTemplate "buildUserData() es el método plantilla fijo; los demás pasos varían (abstractos) o se comparten (findRoleIdByName)."
 
     class RegistrationStrategy {
         #resolveRoleId() Promise~string~
@@ -74,7 +74,7 @@ classDiagram
     UserFactory ..> UserCreationTemplate : usa (vía UserCreationStrategy)
 
     classDef abstractClass stroke:#d4a017,stroke-width:3px
-    class UserCreationTemplate:::abstractClass
+    cssClass "UserCreationTemplate" abstractClass
 ```
 
 ### Correspondencia con los participantes del patrón (GoF)
