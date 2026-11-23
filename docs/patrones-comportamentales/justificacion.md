@@ -122,7 +122,7 @@ classDiagram
     class ActivityHelpers {
             <<helper>>
             +toActivityDomain(activity) ActivityDomain
-            +tDatePassed(startDate, now) boolean
+            +DatePassed(startDate, now) boolean
             +applyExpiration(activity, prisma) ActivityWithLocation
         }
 
