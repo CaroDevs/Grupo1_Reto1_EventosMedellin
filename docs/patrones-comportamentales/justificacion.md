@@ -98,56 +98,59 @@ classDiagram
 ```mermaid
 classDiagram
     class ActivityController {
-            +POST /activities(dto)
-            +GET /activities(filters)
-            +GET /activities/admin(filters)
-            +GET /activities/:id(id)
-            +PUT /activities/:id(id, dto)
-            +PATCH /activities/:id/publish(id)
-            +PATCH /activities/:id/cancel(id)
-            +DELETE /activities/:id(id)
+        +POST /activities(dto) Promise~ActivityWithLocation~
+        +GET /activities(filters) Promise~ActivityWithLocation[]~
+        +GET /activities/:id(id) Promise~ActivityWithLocation~
+        +PUT /activities/:id(id, dto) Promise~ActivityWithLocation~
+        +PATCH /activities/:id/publish(id) Promise~ActivityWithLocation~
+        +PATCH /activities/:id/cancel(id) Promise~ActivityWithLocation~
+        +DELETE /activities/:id(id) Promise~ActivityWithLocation~
         }
 
     class ActivityService {
-        +ActivityService(prisma, locationPort)
-        +create(dto) ActivityWithLocation
-        +findAll(filters, includeDrafts) Promise~ActivityWithLocation[]~
-        +findOne(id) ActivityWithLocation
-        +update(id, dto) ActivityWithLocation
-        +publish(id) ActivityWithLocation
-        +cancel(id) ActivityWithLocation
-        +remove(id) Activity
+        -prisma PrismaService
+        -locationPort ActivityLocationPort
+        +create(dto) Promise~ActivityWithLocation~
+        +findAll(filters) Promise~ActivityWithLocation[]~
+        +count() Promise~number~
+        +findOne(id) Promise~ActivityWithLocation~
+        +update(id, dto) Promise~ActivityWithLocation~
+        +publish(id) Promise~ActivityWithLocation~
+        +cancel(id) Promise~ActivityWithLocation~
+        +remove(id) Promise~ActivityWithLocation~
+        -runTransition(action) void
         -setLocation(id, lat, lng) Promise~void~
     }
     class ActivityHelpers {
-            <<helper>>
-            +toActivityDomain(activity) ActivityDomain
-            +DatePassed(startDate, now) boolean
-            +applyExpiration(activity, prisma) ActivityWithLocation
+        <<helper>>
+        +toActivityDomain(activity) ActivityDomain
+        +DatePassed(startDate, now) boolean
+        +applyExpiration(activity, prisma, now) Promise~ActivityWithLocation~
         }
 
     class ActivityLocationPort {
         <<abstract>>
-        +findAll(filters, includeDrafts) ActivityWithLocation[]
-        +findById(id) ActivityWithLocation
-        +setCoordinates(id, lat, lng) void
+        +findAll(filters) Promise~ActivityWithLocation[]~
+        +findById(id) Promise~ActivityWithLocation | null~
+        +setCoordinates(id, lat, lng) Promise~void~
     }
 
     class ActivityLocationAdapter {
-        +ActivityLocationAdapter(prisma)
-        +findAll(filters, includeDrafts) ActivityWithLocation[]
-        +findById(id) ActivityWithLocation
-        +setCoordinates(id, lat, lng) void
+        -prisma PrismaService
+        +findAll(filters) Promise~ActivityWithLocation[]~
+        +findById(id) Promise~ActivityWithLocation | null~
+        +setCoordinates(id, lat, lng) Promise~void~
     }
 
     class ActivityDomain {
         <<Context>>
-        +id String
-        +title String
-        +ActivityStatus status
-        +String startDate
+        +id string
+        +title string
+        +status ActivityStatus
+        +startDate string
         -states Record~ActivityStatus, ActivityState~
         -getState() ActivityState
+        +setStatus(newStatus) void
         +canEdit() boolean
         +publish() void
         +cancel() void
@@ -165,7 +168,7 @@ classDiagram
 
     class ActivityState {
         <<interface>>
-        +ActivityStatus status
+        +readonly status ActivityStatus
         +canEdit() boolean
         +publish(activity) void
         +cancel(activity) void
@@ -196,25 +199,35 @@ classDiagram
         +finish(activity) void
     }
     class FinishState {
-            +status = FINISHED
-            +canEdit() false
-            +publish(activity) void
-            +cancel(activity) void
-            +finish(activity) void
-        }
+        +status = FINISHED
+        +canEdit() false
+        +publish(activity) void
+        +cancel(activity) void
+        +finish(activity) void
+    }
+    class InvalidStateTransitionError {
+        <<exception>>
+        +name string
+        +message string
+    }
 
     ActivityController --> ActivityService
     ActivityService --> ActivityLocationPort
     ActivityService ..> ActivityHelpers
-    ActivityHelpers ..> ActivityDomain 
+    ActivityService ..> InvalidStateTransitionError
+    ActivityHelpers ..> ActivityDomain
     ActivityLocationAdapter --|> ActivityLocationPort
 
     ActivityDomain --> ActivityStatus
-    ActivityDomain ..> ActivityState 
+    ActivityDomain ..> ActivityState
     DraftState ..|> ActivityState
     PublishState ..|> ActivityState
     CancelState ..|> ActivityState
     FinishState ..|> ActivityState
+    DraftState ..> InvalidStateTransitionError
+    PublishState ..> InvalidStateTransitionError
+    CancelState ..> InvalidStateTransitionError
+    FinishState ..> InvalidStateTransitionError
 ```
 
 
