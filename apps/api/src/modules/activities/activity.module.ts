@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { ActivityController } from './activity.controller';
 import { ActivityService } from './activity.service';
 import { AuthModule } from "../auth/auth.module";
-import { ActivityLocationPort } from './activity.location.port';
-import { ActivityLocationAdapter } from './activity.location.adapter';
+import { ActivityLocationPort } from './adapter/activity.location.port';
+import { ActivityLocationAdapter } from './adapter/activity.location.adapter';
 
 @Module({
   imports: [AuthModule],

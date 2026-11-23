@@ -1,5 +1,5 @@
 import { Activity } from "@prisma/client";
-import { FilterActivitiesDto } from "./dto/filter-activities.dto";
+import { FilterActivitiesDto } from "../dto/filter-activities.dto";
 
 // location es una columna PostGIS (geography(Point,4326)) — Prisma Client no
 // puede leerla/escribirla directo (por eso es Unsupported en schema.prisma).
