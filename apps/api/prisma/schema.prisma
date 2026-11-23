@@ -27,6 +27,7 @@ model Activity {
   updatedAt   DateTime? @updatedAt
 
   location Unsupported("geography(Point, 4326)")?
+  @@index([location], map: "activities_location_idx", type: Gist)
   @@map("activities")
 }
 

@@ -1,4 +1,4 @@
-import { Activity } from "@prisma/client";
+import { Activity, ActivityStatus } from "@prisma/client";
 import { FilterActivitiesDto } from "../dto/filter-activities.dto";
 
 // location es una columna PostGIS (geography(Point,4326)) — Prisma Client no
@@ -12,7 +12,7 @@ export type ActivityWithLocation = Activity & {
 
 export abstract class ActivityLocationPort
 {
-    abstract findAll(filters: FilterActivitiesDto): Promise<ActivityWithLocation[]>;
+    abstract findAll(filters: FilterActivitiesDto, statuses?: ActivityStatus[]): Promise<ActivityWithLocation[]>;
     abstract findById(id: string): Promise<ActivityWithLocation | null>;
     abstract setCoordinates(id: string, latitude: number, longitude: number): Promise<void>;
 }

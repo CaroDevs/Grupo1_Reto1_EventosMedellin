@@ -7,6 +7,9 @@ import { ConflictException, Injectable, NotFoundException } from "@nestjs/common
 import { ActivityHelpers } from "./helpers/activityhelpers";
 import { InvalidStateTransitionError } from "./domain/invalid.state.transition";
 import { ActivityLocationPort, ActivityWithLocation } from "./adapter/activity.location.port";
+import { ActivityStatus } from "@prisma/client";
+import { ADMIN_ROLE, ORGANIZER_ROLE } from "@medellin-activities/shared-types";
+import type { JwtPayload } from "../../common/auth/jwt-auth.guard";
 import { ActivityBuilder } from "./builder/activity.builder";
 
 
@@ -30,6 +33,30 @@ export class ActivityService
         }
     }
 
+    // Criterio igual al del frontend (isVisibleToPublic): solo PUBLISHED.
+    private static readonly PUBLIC_STATUSES: ActivityStatus[] = [ActivityStatus.PUBLISHED];
+
+    // Admin y organizador ven todas las actividades; el resto, solo las públicas.
+    private canSeeAll(user?: Pick<JwtPayload, 'role'>): boolean {
+        return user?.role === ADMIN_ROLE || user?.role === ORGANIZER_ROLE;
+    }
+
+    private async guardedUpdateStatus(
+        id: string,
+        from: ActivityStatus,
+        to: ActivityStatus,
+    ): Promise<void> {
+        const result = await this.prisma.activity.updateMany({
+            where: { id, status: from },
+            data: { status: to },
+        });
+        if (result.count === 0) {
+            throw new ConflictException(
+                'La actividad cambió de estado, recarga e intenta de nuevo',
+            );
+        }
+    }
+
     async create(createActivityDto: CreateActivityDto): Promise<ActivityWithLocation> {
         const builder: IActivityBuilder = ActivityBuilder.fromDto(createActivityDto);
         const activityData = builder.build();
@@ -44,23 +71,43 @@ export class ActivityService
         createActivityDto.longitude,
         );
 
-        return this.findOne(activity.id);
+        return this.loadActivity(activity.id);
     }
 
     count(): Promise<number> {
         return this.prisma.activity.count();
     }
 
-    async findAll(filters: FilterActivitiesDto = {}): Promise<ActivityWithLocation[]> {
-        const activities = await this.locationPort.findAll(filters);
-        return Promise.all(
+    async findAll(
+        filters: FilterActivitiesDto = {},
+        user?: Pick<JwtPayload, 'role'>,
+    ): Promise<ActivityWithLocation[]> {
+        const seeAll = this.canSeeAll(user);
+        const activities = await this.locationPort.findAll(
+            filters,
+            seeAll ? undefined : ActivityService.PUBLIC_STATUSES,
+        );
+        const updated = await Promise.all(
         activities.map((activity) =>
             ActivityHelpers.applyExpiration(activity, this.prisma),
         ),
         );
+        // La expiración puede haber pasado una actividad a FINISHED.
+        return seeAll
+            ? updated
+            : updated.filter((a) => ActivityService.PUBLIC_STATUSES.includes(a.status));
     }
 
-    async findOne(id: string): Promise<ActivityWithLocation> {
+    async findOne(id: string, user?: Pick<JwtPayload, 'role'>): Promise<ActivityWithLocation> {
+        const activity = await this.loadActivity(id);
+        if (!this.canSeeAll(user) && !ActivityService.PUBLIC_STATUSES.includes(activity.status)) {
+            throw new NotFoundException(`Actividad con id ${id} no encontrada.`);
+        }
+        return activity;
+    }
+
+    // Lectura interna sin restricción de visibilidad (uso de gestión).
+    private async loadActivity(id: string): Promise<ActivityWithLocation> {
         const activity = await this.locationPort.findById(id);
         if (!activity) {
         throw new NotFoundException(`Actividad con id ${id} no encontrada.`);
@@ -72,7 +119,7 @@ export class ActivityService
         id: string,
         updateActivityDto: UpdateActivityDto,
     ): Promise<ActivityWithLocation> {
-        const current = await this.findOne(id);
+        const current = await this.loadActivity(id);
         const domain = ActivityHelpers.toActivityDomain(current);
 
         if (!domain.canEdit()) {
@@ -90,39 +137,33 @@ export class ActivityService
 
         await this.setLocation(id, latitude, longitude);
 
-        return this.findOne(id);
+        return this.loadActivity(id);
     }
 
     async publish(id: string): Promise<ActivityWithLocation> {
-        const current = await this.findOne(id);
+        const current = await this.loadActivity(id);
         const domain = ActivityHelpers.toActivityDomain(current);
 
         this.runTransition(() => domain.publish());
 
-        await this.prisma.activity.update({
-        where: { id },
-        data: { status: domain.status },
-        });
+        await this.guardedUpdateStatus(id, current.status, domain.status);
 
-        return this.findOne(id);
+        return this.loadActivity(id);
     }
 
     async cancel(id: string): Promise<ActivityWithLocation> {
-        const current = await this.findOne(id);
+        const current = await this.loadActivity(id);
         const domain = ActivityHelpers.toActivityDomain(current);
 
         this.runTransition(() => domain.cancel());
 
-        await this.prisma.activity.update({
-        where: { id },
-        data: { status: domain.status },
-        });
+        await this.guardedUpdateStatus(id, current.status, domain.status);
 
-        return this.findOne(id);
+        return this.loadActivity(id);
     }
 
     async remove(id: string): Promise<ActivityWithLocation> {
-        const current = await this.findOne(id);
+        const current = await this.loadActivity(id);
         await this.prisma.activity.delete({ where: { id } });
         return current;
     }

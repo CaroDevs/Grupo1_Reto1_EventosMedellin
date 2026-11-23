@@ -1,3 +1,4 @@
+import { ActivityStatus } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { ActivityLocationPort, ActivityWithLocation } from "./activity.location.port";
 import { FilterActivitiesDto } from "../dto/filter-activities.dto";
@@ -18,7 +19,7 @@ export class ActivityLocationAdapter implements ActivityLocationPort
 {
     constructor(private readonly prisma: PrismaService){}
 
-    async findAll(filters: FilterActivitiesDto = {}): Promise<ActivityWithLocation[]> {
+    async findAll(filters: FilterActivitiesDto = {}, statuses?: ActivityStatus[]): Promise<ActivityWithLocation[]> {
         const conditions: string[] = [`"startDate" IS NOT NULL`, `"startDate"::timestamptz >= $1`];
         const params: unknown[] = [filters.from ?? new Date(). toISOString()];
 
@@ -26,6 +27,13 @@ export class ActivityLocationAdapter implements ActivityLocationPort
         {
             params.push(filters.category)
             conditions.push(`category = $${params.length}`);
+        }
+
+        // Si vienen estados, solo se devuelven actividades en esos estados.
+        if(statuses)
+        {
+            params.push(statuses)
+            conditions.push(`status = ANY($${params.length}::"ActivityStatus"[])`);
         }
 
         return this.prisma.$queryRawUnsafe<ActivityWithLocation[]>(
