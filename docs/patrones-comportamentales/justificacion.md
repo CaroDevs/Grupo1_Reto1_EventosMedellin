@@ -95,12 +95,6 @@ classDiagram
 ### Por qué Template Method resuelve esto
 
 ### Diagrama UML
-
-
-
-### Correspondencia con los participantes del patrón (GoF)
-### Adaptación al dominio
-
 ```mermaid
 classDiagram
 class ActivityController {
@@ -211,3 +205,9 @@ class ActivityController {
     PublishState ..|> ActivityState
     CancelState ..|> ActivityState
     FinishState ..|> ActivityState
+
+
+### Correspondencia con los participantes del patrón (GoF)
+### Adaptación al dominio
+
+
