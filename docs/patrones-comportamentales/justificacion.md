@@ -88,3 +88,126 @@ classDiagram
 3. **Cada subclase declara su propio constructor, aunque solo llame a `super(prisma)`.** Si una subclase de una clase `@Injectable()` no declara constructor propio, TypeScript no emite los metadatos de tipos (`design:paramtypes`) que NestJS necesita para inyectar `PrismaService`.
 
 4. **El comportamiento público no cambió.** `buildUserData(input)` sigue siendo el único método que `UserFactory` conoce, con la misma firma de antes — por eso los tests unitarios que ya existían para las tres estrategias (`registration.strategy.spec.ts`, `google-oauth.strategy.spec.ts`, `admin-creation.strategy.spec.ts`) no necesitaron ningún cambio y siguen pasando.
+
+## Patrón 1: Template Method (creación de usuarios)
+
+### El problema
+### Por qué Template Method resuelve esto
+
+### Diagrama UML
+
+
+
+### Correspondencia con los participantes del patrón (GoF)
+### Adaptación al dominio
+
+```mermaid
+classDiagram
+class ActivityController {
+        +POST /activities(dto)
+        +GET /activities(filters)
+        +GET /activities/admin(filters)
+        +GET /activities/:id(id)
+        +PUT /activities/:id(id, dto)
+        +PATCH /activities/:id/publish(id)
+        +PATCH /activities/:id/cancel(id)
+        +DELETE /activities/:id(id)
+    }
+
+    class ActivityService {
+        +ActivityService(prisma, locationPort)
+        +create(dto) ActivityWithLocation
+        +findAll(filters) ActivityWithLocation[]
+        +findAllForAdmin(filters) ActivityWithLocation[]
+        +findOne(id) ActivityWithLocation
+        +update(id, dto) ActivityWithLocation
+        +publish(id) ActivityWithLocation
+        +cancel(id) ActivityWithLocation
+        +remove(id) Activity
+    }
+
+    class ActivityLocationPort {
+        <<abstract>>
+        +findAll(filters, includeDrafts) ActivityWithLocation[]
+        +findById(id) ActivityWithLocation
+        +setCoordinates(id, lat, lng) void
+    }
+
+    class ActivityLocationAdapter {
+        +ActivityLocationAdapter(prisma)
+        +findAll(filters, includeDrafts) ActivityWithLocation[]
+        +findById(id) ActivityWithLocation
+        +setCoordinates(id, lat, lng) void
+    }
+
+    class ActivityDomain {
+        <<Context>>
+        +id String
+        +title String
+        +ActivityStatus status
+        +canEdit() boolean
+        +publish() void
+        +cancel() void
+        +finish() void
+        +expired(now) boolean
+    }
+
+    class ActivityStatus {
+        <<enumeration>>
+        DRAFT
+        PUBLISHED
+        CANCELLED
+        FINISHED
+    }
+
+    class ActivityState {
+        <<interface>>
+        +ActivityStatus status
+        +canEdit() boolean
+        +publish(activity) void
+        +cancel(activity) void
+        +finish(activity) void
+    }
+
+    class DraftState {
+        +status = DRAFT
+        +canEdit() true
+        +publish(activity) void
+        +cancel(activity) void
+        +finish(activity) void
+    }
+
+    class PublishState {
+        +status = PUBLISHED
+        +canEdit() true
+        +publish(activity) void
+        +cancel(activity) void
+        +finish(activity) void
+    }
+
+    class CancelState {
+        +status = CANCELLED
+        +canEdit() false
+        +publish(activity) void
+        +cancel(activity) void
+        +finish(activity) void
+    }
+    class FinishState {
+            +status = FINISHED
+            +canEdit() false
+            +publish(activity) void
+            +cancel(activity) void
+            +finish(activity) void
+        }
+
+    ActivityController --> ActivityService
+    ActivityService --> ActivityLocationPort 
+    ActivityService ..> ActivityDomain 
+    ActivityLocationAdapter --|> ActivityLocationPort
+
+    ActivityDomain --> ActivityStatus
+    ActivityDomain ..> ActivityState 
+    DraftState ..|> ActivityState
+    PublishState ..|> ActivityState
+    CancelState ..|> ActivityState
+    FinishState ..|> ActivityState
