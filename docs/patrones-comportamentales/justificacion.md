@@ -97,16 +97,16 @@ classDiagram
 ### Diagrama UML
 ```mermaid
 classDiagram
-class ActivityController {
-        +POST /activities(dto)
-        +GET /activities(filters)
-        +GET /activities/admin(filters)
-        +GET /activities/:id(id)
-        +PUT /activities/:id(id, dto)
-        +PATCH /activities/:id/publish(id)
-        +PATCH /activities/:id/cancel(id)
-        +DELETE /activities/:id(id)
-    }
+    class ActivityController {
+            +POST /activities(dto)
+            +GET /activities(filters)
+            +GET /activities/admin(filters)
+            +GET /activities/:id(id)
+            +PUT /activities/:id(id, dto)
+            +PATCH /activities/:id/publish(id)
+            +PATCH /activities/:id/cancel(id)
+            +DELETE /activities/:id(id)
+        }
 
     class ActivityService {
         +ActivityService(prisma, locationPort)
@@ -205,6 +205,7 @@ class ActivityController {
     PublishState ..|> ActivityState
     CancelState ..|> ActivityState
     FinishState ..|> ActivityState
+```
 
 
 ### Correspondencia con los participantes del patrón (GoF)
