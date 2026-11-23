@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import './leafletIconFix';
 import { apiGet } from '../../shared/http/client';
-import type { Activity } from './Activity';
+import type { Activity } from './Interface/Activity';
 import { useCategories } from '../categories/useCategories';
 import { useActivityCrud } from './useActivityCrud';
 import { useSessionUser } from '../../shared/auth/session';
 import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 import { formatStartDate } from './formatActivityDate';
+import { ActivityActions } from './ActivityActions';
+import { getActivityState } from './State/getActivityState';
+import { ActivityStageBadge } from './State/ActivityStageBadge';
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -34,19 +37,25 @@ export function ActivitiesMap() {
       .finally(() => setLoading(false));
   }
 
-  const { setEditingActivity, setDeletingActivity, modals } = useActivityCrud(loadActivities);
+  const { setEditingActivity, setDeletingActivity, setCancellingActivity, publishActivity, modals } =
+    useActivityCrud(loadActivities);
 
   useEffect(() => {
     setLoading(true);
     void loadActivities();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [categoryFilter, fromFilter]);
 
-  const located = activities.filter(
+
+  const visibleActivities = canManage
+    ? activities
+    : activities.filter((activity) => getActivityState(activity.status).isVisibleToPublic());
+
+  const located = visibleActivities.filter(
     (activity): activity is Activity & { latitude: number; longitude: number } =>
       activity.latitude != null && activity.longitude != null,
   );
-  const withoutLocation = activities.length - located.length;
+  const withoutLocation = visibleActivities.length - located.length;
 
   return (
     <>
@@ -106,7 +115,10 @@ export function ActivitiesMap() {
                 <Marker key={activity.id} position={[activity.latitude, activity.longitude]}>
                   <Popup>
                     <div style={{ minWidth: '180px' }}>
-                      <span className="badge text-bg-primary mb-2">{activity.category}</span>
+                      <div className="d-flex justify-content-between align-items-start gap-2 mb-2">
+                        <span className="badge text-bg-primary">{activity.category}</span>
+                        {canManage && <ActivityStageBadge status={activity.status} />}
+                      </div>
                       <h6 className="mb-1">{activity.title}</h6>
                       <p className="mb-1 small">{activity.description}</p>
                       <p className="mb-1 small text-muted">
@@ -120,22 +132,13 @@ export function ActivitiesMap() {
                         </p>
                       )}
                       {canManage && (
-                        <div className="d-flex gap-2">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-primary"
-                            onClick={() => setEditingActivity(activity)}
-                          >
-                            <i className="fa-solid fa-pen" /> Editar
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-outline-danger"
-                            onClick={() => setDeletingActivity(activity)}
-                          >
-                            <i className="fa-solid fa-trash" /> Borrar
-                          </button>
-                        </div>
+                        <ActivityActions
+                          activity={activity}
+                          onEdit={setEditingActivity}
+                          onPublish={(target) => void publishActivity(target)}
+                          onCancel={setCancellingActivity}
+                          onDelete={setDeletingActivity}
+                        />
                       )}
                     </div>
                   </Popup>
@@ -144,7 +147,7 @@ export function ActivitiesMap() {
             </MapContainer>
           </div>
 
-          {activities.length === 0 && (
+          {visibleActivities.length === 0 && (
             <p className="text-muted mt-2 mb-0">No hay actividades que coincidan con el filtro.</p>
           )}
 

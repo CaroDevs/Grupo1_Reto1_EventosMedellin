@@ -1,7 +1,7 @@
 import { ActivityStatus } from "@prisma/client";
 import { ActivityDomain } from "../domain/activity.domain";
 import { ActivityState } from "../Interfaces/activityState.interface";
-import { BadRequestException } from "@nestjs/common";
+import { InvalidStateTransitionError } from "../domain/invalid.state.transition";
 
 export class PublishState implements ActivityState {
     readonly status = ActivityStatus.PUBLISHED
@@ -10,7 +10,7 @@ export class PublishState implements ActivityState {
        return true;
    }
     publish(_activity: ActivityDomain): void {
-        throw new BadRequestException('La actividad ya se encuentra publicada');
+        throw new InvalidStateTransitionError('La actividad ya se encuentra publicada');
     }
 
     cancel(activity: ActivityDomain): void {

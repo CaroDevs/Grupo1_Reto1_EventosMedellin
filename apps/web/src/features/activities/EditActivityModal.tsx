@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { apiPut } from '../../shared/http/client';
-import type { Activity } from './Activity';
+import type { Activity } from './Interface/Activity';
 import { useCategories } from '../categories/useCategories';
 import { LocationPicker } from './LocationPicker';
 

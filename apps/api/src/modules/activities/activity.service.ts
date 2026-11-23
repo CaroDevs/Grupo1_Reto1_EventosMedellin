@@ -47,6 +47,10 @@ export class ActivityService
         return this.findOne(activity.id);
     }
 
+    count(): Promise<number> {
+        return this.prisma.activity.count();
+    }
+
     async findAll(filters: FilterActivitiesDto = {}): Promise<ActivityWithLocation[]> {
         const activities = await this.locationPort.findAll(filters);
         return Promise.all(

@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { apiGet } from '../../shared/http/client';
-import type { Activity } from './Activity';
+import type { Activity } from './Interface/Activity';
 import { useActivityCrud } from './useActivityCrud';
 import { useSessionUser } from '../../shared/auth/session';
 import { ADMIN_ROLE, ORGANIZER_ROLE } from '@medellin-activities/shared-types';
 import { formatStartDate } from './formatActivityDate';
+
+import { ActivityActions } from './ActivityActions';
+import { getActivityState } from './State/getActivityState';
+import { ActivityStageBadge } from './State/ActivityStageBadge';
 
 export function ActivitiesList() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -24,7 +28,8 @@ export function ActivitiesList() {
       .finally(() => setLoading(false));
   }
 
-  const { setEditingActivity, setDeletingActivity, modals } = useActivityCrud(loadActivities);
+  const { setEditingActivity, setDeletingActivity, setCancellingActivity, publishActivity, modals } =
+    useActivityCrud(loadActivities);
 
   useEffect(() => {
     void loadActivities();
@@ -48,18 +53,26 @@ export function ActivitiesList() {
     );
   }
 
-  if (activities.length === 0) {
+  // Quien no gestiona solo ve lo que el estado marca como público.
+  const visibleActivities = canManage
+    ? activities
+    : activities.filter((activity) => getActivityState(activity.status).isVisibleToPublic());
+
+  if (visibleActivities.length === 0) {
     return <p className="text-muted">No hay actividades registradas todavía.</p>;
   }
 
   return (
     <>
       <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-        {activities.map((activity) => (
+        {visibleActivities.map((activity) => (
           <div className="col" key={activity.id}>
             <div className="card h-100 shadow-sm">
               <div className="card-body">
-                <span className="badge text-bg-primary mb-2">{activity.category}</span>
+                <div className="d-flex justify-content-between align-items-start mb-2">
+                  <span className="badge text-bg-primary">{activity.category}</span>
+                  {canManage && <ActivityStageBadge status={activity.status} />}
+                </div>
                 <h5 className="card-title">{activity.title}</h5>
                 <p className="card-text">{activity.description}</p>
                 <p className="mb-1 small text-muted">
@@ -74,21 +87,15 @@ export function ActivitiesList() {
                 )}
               </div>
               {canManage && (
-                <div className="card-footer bg-transparent d-flex justify-content-end gap-2">
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-primary"
-                    onClick={() => setEditingActivity(activity)}
-                  >
-                    <i className="fa-solid fa-pen" /> Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => setDeletingActivity(activity)}
-                  >
-                    <i className="fa-solid fa-trash" /> Borrar
-                  </button>
+                <div className="card-footer bg-transparent">
+                  <ActivityActions
+                    activity={activity}
+                    className="justify-content-end"
+                    onEdit={setEditingActivity}
+                    onPublish={(target) => void publishActivity(target)}
+                    onCancel={setCancellingActivity}
+                    onDelete={setDeletingActivity}
+                  />
                 </div>
               )}
             </div>

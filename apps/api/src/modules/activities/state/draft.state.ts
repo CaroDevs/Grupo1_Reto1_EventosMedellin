@@ -1,7 +1,7 @@
 import { ActivityStatus } from "@prisma/client";
 import { ActivityDomain } from "../domain/activity.domain";
 import { ActivityState } from "../Interfaces/activityState.interface";
-import { BadRequestException } from "@nestjs/common";
+import { InvalidStateTransitionError } from "../domain/invalid.state.transition";
 
 export class DraftState implements ActivityState {
     readonly status = ActivityStatus.DRAFT
@@ -18,7 +18,7 @@ export class DraftState implements ActivityState {
     }
 
     finish(_activity: ActivityDomain): void {
-        throw new BadRequestException('Una actividad en borrador (DRAFT) no puede finalizarse directamente');
+        throw new InvalidStateTransitionError('Una actividad en borrador (DRAFT) no puede finalizarse directamente');
     }
    
 }
