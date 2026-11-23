@@ -139,11 +139,14 @@ classDiagram
         +id String
         +title String
         +ActivityStatus status
+        +String startDate
+        -states Record~ActivityStatus, ActivityState~
+        -getState() ActivityState
         +canEdit() boolean
         +publish() void
         +cancel() void
         +finish() void
-        +expired(now) boolean
+        
     }
 
     class ActivityStatus {
