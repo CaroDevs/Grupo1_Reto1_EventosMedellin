@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { ActivityLocationPort, ActivityWithLocation } from "./activity.location.port";
-import { FilterActivitiesDto } from "./dto/filter-activities.dto";
-import { PrismaService } from "../../database/prisma.service";
+import { FilterActivitiesDto } from "../dto/filter-activities.dto";
+import { PrismaService } from "../../../database/prisma.service";
 
 
 const SELECT_WITH_LOCATION = `
     SELECT
-        id, title, description, category, city, price, capacity,
+        id, title, description, category, city, price, capacity, status,
         "startDate", "createdAt", "updatedAt",
         ST_Y(location::geometry) AS latitude,
         ST_X(location::geometry) AS longitude

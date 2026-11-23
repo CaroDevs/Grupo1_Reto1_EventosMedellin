@@ -1,5 +1,6 @@
-import { CreateActivityDto } from "./dto/create-activity.dto";
-import { IActivityBuilder } from "./Interfaces/activity.interface";
+import { ActivityStatus } from "@prisma/client";
+import { CreateActivityDto } from "../dto/create-activity.dto";
+import { IActivityBuilder } from "../Interfaces/activity.interface";
 
 export class ActivityBuilder implements IActivityBuilder
 {
@@ -56,6 +57,7 @@ export class ActivityBuilder implements IActivityBuilder
             price: this.price ?? 0,
             capacity: this.capacity ?? 50,
             startDate: this.startDate ?? new Date(). toISOString(),
+            status: ActivityStatus.DRAFT,
         };
     }
     static fromDto(dto: CreateActivityDto): ActivityBuilder

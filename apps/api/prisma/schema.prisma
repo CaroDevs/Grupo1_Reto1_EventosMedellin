@@ -6,6 +6,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ActivityStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  FINISHED
+}
+
 model Activity {
   id          String   @id @default(uuid())
   title       String
@@ -15,14 +22,11 @@ model Activity {
   price       Float    @default(0)
   capacity    Int      @default(50)
   startDate   String?
+  status      ActivityStatus @default(DRAFT)
   createdAt   DateTime @default(now())
   updatedAt   DateTime? @updatedAt
 
-  // Columna PostGIS. Prisma no puede leer/escribir geometrías directo por
-  // Client (por eso Unsupported), así que latitud/longitud se leen y
-  // escriben con SQL crudo en ActivityLocationAdapter — ver findAll/findOne/create/update.
   location Unsupported("geography(Point, 4326)")?
-
   @@map("activities")
 }
 
