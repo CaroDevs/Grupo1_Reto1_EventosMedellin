@@ -111,14 +111,20 @@ classDiagram
     class ActivityService {
         +ActivityService(prisma, locationPort)
         +create(dto) ActivityWithLocation
-        +findAll(filters) ActivityWithLocation[]
-        +findAllForAdmin(filters) ActivityWithLocation[]
+        +findAll(filters, includeDrafts) Promise~ActivityWithLocation[]~
         +findOne(id) ActivityWithLocation
         +update(id, dto) ActivityWithLocation
         +publish(id) ActivityWithLocation
         +cancel(id) ActivityWithLocation
         +remove(id) Activity
+        -setLocation(id, lat, lng) Promise~void~
     }
+    class ActivityHelpers {
+            <<helper>>
+            +toActivityDomain(activity) ActivityDomain
+            +tDatePassed(startDate, now) boolean
+            +applyExpiration(activity, prisma) ActivityWithLocation
+        }
 
     class ActivityLocationPort {
         <<abstract>>
@@ -198,8 +204,9 @@ classDiagram
         }
 
     ActivityController --> ActivityService
-    ActivityService --> ActivityLocationPort 
-    ActivityService ..> ActivityDomain 
+    ActivityService --> ActivityLocationPort
+    ActivityService ..> ActivityHelpers
+    ActivityHelpers ..> ActivityDomain 
     ActivityLocationAdapter --|> ActivityLocationPort
 
     ActivityDomain --> ActivityStatus
