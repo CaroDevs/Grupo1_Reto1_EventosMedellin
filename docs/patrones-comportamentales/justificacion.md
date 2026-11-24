@@ -156,7 +156,6 @@ classDiagram
         +startDate string
         -states Record~ActivityStatus, ActivityState~
         -getState() ActivityState
-        +setStatus(newStatus) void
         +canEdit() boolean
         +publish() void
         +cancel() void
