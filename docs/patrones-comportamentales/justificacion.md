@@ -89,7 +89,7 @@ classDiagram
 
 4. **El comportamiento público no cambió.** `buildUserData(input)` sigue siendo el único método que `UserFactory` conoce, con la misma firma de antes — por eso los tests unitarios que ya existían para las tres estrategias (`registration.strategy.spec.ts`, `google-oauth.strategy.spec.ts`, `admin-creation.strategy.spec.ts`) no necesitaron ningún cambio y siguen pasando.
 
-## Patrón 1: Template Method (creación de usuarios)
+## Patrón 2: State
 
 ### El problema
 El proceso de creación de una actividad no presentaba un ciclo de vida definido, la única regla que simulaba un estado estaba escondida en una consulta SQL dentro de `ActivityLocationAdapter.findAll`, donde simplemente se mostraban las actividades cuya fecha de inicio fuera mayor o igual a la actual. Esto generaba problemas de manera que impedía guardar una actividad como borrador antes de publicarla, cancelarla cuando fuera necesario o bloquear su edición una vez finalizada. Si intentábamos resolverlo agregando un campo status y llenando ActivityService de condicionales (if / else), cada operación tendría que conocer todos los estados y sus transiciones válidas, dejando las reglas regadas por todo el código y haciendo que agregar un estado nuevo fuera propenso a errores.
