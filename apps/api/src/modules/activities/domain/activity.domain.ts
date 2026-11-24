@@ -35,10 +35,6 @@ export class ActivityDomain
         return this.states[this.status];
     }
 
-    public setStatus(newStatus: ActivityStatus): void {
-        this.status = newStatus;
-    }
-
     public canEdit(): boolean {
         return this.getState().canEdit();
     }
