@@ -92,7 +92,10 @@ classDiagram
 ## Patrón 1: Template Method (creación de usuarios)
 
 ### El problema
-### Por qué Template Method resuelve esto
+El proceso de creación de una actividad no presentaba un ciclo de vida definido, la única regla que simulaba un estado estaba escondida en una consulta SQL dentro de `ActivityLocationAdapter.findAll`, donde simplemente se mostraban las actividades cuya fecha de inicio fuera mayor o igual a la actual. Esto generaba problemas de manera que impedía guardar una actividad como borrador antes de publicarla, cancelarla cuando fuera necesario o bloquear su edición una vez finalizada. Si intentábamos resolverlo agregando un campo status y llenando ActivityService de condicionales (if / else), cada operación tendría que conocer todos los estados y sus transiciones válidas, dejando las reglas regadas por todo el código y haciendo que agregar un estado nuevo fuera propenso a errores.
+
+### Por qué State resuelve esto
+El patrón State nos permite encapsular las reglas y transiciones de cada estado (DRAFT, PUBLISHED, CANCELLED y FINISHED) en su propia clase; así nuestro ActivityService se mantiene limpio, cada estado controla qué acciones permite y el sistema puede crecer con nuevos estados sin tener que modificar condicionales por todas partes.
 
 ### Diagrama UML
 ```mermaid
@@ -110,16 +113,19 @@ classDiagram
     class ActivityService {
         -prisma PrismaService
         -locationPort ActivityLocationPort
+        -PUBLIC_STATUSES ActivityStatus[]
         +create(dto) Promise~ActivityWithLocation~
-        +findAll(filters) Promise~ActivityWithLocation[]~
+        +findAll(filters, user?) Promise~ActivityWithLocation[]~
+        +findOne(id, user?) Promise~ActivityWithLocation~
         +count() Promise~number~
-        +findOne(id) Promise~ActivityWithLocation~
         +update(id, dto) Promise~ActivityWithLocation~
         +publish(id) Promise~ActivityWithLocation~
         +cancel(id) Promise~ActivityWithLocation~
         +remove(id) Promise~ActivityWithLocation~
         -runTransition(action) void
-        -setLocation(id, lat, lng) Promise~void~
+        -guardedUpdateStatus(id, from, to) Promise~void~
+        -canSeeAll(user?) boolean
+        -loadActivity(id) Promise~ActivityWithLocation~
     }
     class ActivityHelpers {
         <<helper>>
@@ -168,7 +174,7 @@ classDiagram
 
     class ActivityState {
         <<interface>>
-        +readonly status ActivityStatus
+        +status ActivityStatus
         +canEdit() boolean
         +publish(activity) void
         +cancel(activity) void
@@ -213,11 +219,11 @@ classDiagram
 
     ActivityController --> ActivityService
     ActivityService --> ActivityLocationPort
-    ActivityService ..> ActivityHelpers
-    ActivityService ..> InvalidStateTransitionError
-    ActivityHelpers ..> ActivityDomain
     ActivityLocationAdapter --|> ActivityLocationPort
-
+    ActivityService ..> ActivityHelpers
+    ActivityService ..> InvalidStateTransitionError : traduce a 409
+    ActivityHelpers ..> ActivityDomain
+    
     ActivityDomain --> ActivityStatus
     ActivityDomain ..> ActivityState
     DraftState ..|> ActivityState
@@ -230,8 +236,25 @@ classDiagram
     FinishState ..> InvalidStateTransitionError
 ```
 
-
 ### Correspondencia con los participantes del patrón (GoF)
+| Participante GoF | Clase en el dominio | Rol |
+|---|---|---|
+| **Context** | `ActivityDomain` | Lleva el estado actual `status` y el mapa de estados; expone las acciones (`canEdit, publish, cancel, finish`) y las delega al estado activo pasándose a sí mismo para que pueda cambiarlo. |
+| **State** | `ActivityState` | Contrato común que define qué acciones maneja cualquier estado (`canEdit`, `publish`, `cancel`, `finish`). |
+| **ConcreteState** | `DraftState`, `PublishState`, `CancelState`, `FinishState` | Cada estado aplica sus propias reglas y lanza error si el cambio no es válido. `CancelState` y `FinishState` scierran el ciclo: no dejan editar ni pasar a otro estado. |
+| **Client** | `ActivityService` | Carga la actividad, la arma como `ActivityDomain`, pide la acción y guarda el resultado en base de datos, sin meter lógica de estados. |
+
 ### Adaptación al dominio
+
+Aunque seguimos la estructura base del patrón State del GoF (con un contexto, una interfaz de estado y clases concretas por cada estado), adaptamos la implementación para que encajara con nuestra arquitectura web en NestJS y Prisma:
+
+1. **Reconstrucción sin estado en memoria**: En lugar de mantener objetos vivos entre peticiones, guardamos solo un enum en la base de datos y reconstruimos el ActivityDomain en cada operación usando objetos de estado sin datos propios.
+
+2. **Dominio desacoplado y persistencia segura**: Los estados lanzan excepciones propias (`InvalidStateTransitionError`) que el servicio traduce a 409 Conflict, y las transiciones se guardan verificando el estado previo en base de datos para evitar sobrescrituras concurrentes.
+
+3. **Reglas de negocio en el ciclo de vida**: FINISHED se dispara automáticamente al consultar una actividad publicada vencida, y el estado controla tanto la visibilidad en la API como los botones activos en el frontend.
+
+A diferencia de Strategy, donde el cliente elige un comportamiento fijo, aquí la actividad evoluciona dinámicamente pasando de un estado a otro según las reglas de cada etapa.
+
 
 
