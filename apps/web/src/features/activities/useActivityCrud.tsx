@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { apiDelete } from '../../shared/http/client';
-import type { Activity } from './Activity';
+import { apiDelete, apiPatch } from '../../shared/http/client';
+import type { Activity } from './Interface/Activity';
 import { EditActivityModal } from './EditActivityModal';
 import { ConfirmDeleteModal } from '../admin/ConfirmDeleteModal';
+import { ConfirmCancelActivity } from './State/ConfirmCancelActivity';
 
-// El mapa y el listado necesitan exactamente lo mismo para editar/borrar una
-// actividad (mismo estado, mismos modales) — antes cada uno lo repetía por
-// su cuenta. Este hook es la única pieza que lo sabe hacer.
 export function useActivityCrud(reload: () => void | Promise<void>) {
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [deletingActivity, setDeletingActivity] = useState<Activity | null>(null);
+  const [cancellingActivity, setCancellingActivity] = useState<Activity | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function confirmDelete() {
     if (!deletingActivity) return;
@@ -17,6 +17,33 @@ export function useActivityCrud(reload: () => void | Promise<void>) {
     await apiDelete(`/activities/${deletingActivity.id}`);
     setDeletingActivity(null);
     await reload();
+  }
+
+  async function runTransition(path: string) {
+    setActionError(null);
+
+    try {
+      await apiPatch(path, {});
+    } catch (err) {
+      console.error('Error al cambiar el estado de la actividad:', err);
+      setActionError(
+        'No se pudo cambiar el estado de la actividad. Es posible que ya haya cambiado; se recargó la información.',
+      );
+    } finally {
+      await reload();
+    }
+  }
+
+  async function publishActivity(activity: Activity) {
+    await runTransition(`/activities/${activity.id}/publish`);
+  }
+
+  async function confirmCancel() {
+    if (!cancellingActivity) return;
+
+    const target = cancellingActivity;
+    setCancellingActivity(null);
+    await runTransition(`/activities/${target.id}/cancel`);
   }
 
   const modals = (
@@ -40,8 +67,33 @@ export function useActivityCrud(reload: () => void | Promise<void>) {
           onConfirm={() => void confirmDelete()}
         />
       )}
+
+      {cancellingActivity && (
+        <ConfirmCancelActivity
+          name={cancellingActivity.title}
+          onClose={() => setCancellingActivity(null)}
+          onConfirm={() => void confirmCancel()}
+        />
+      )}
+
+      {actionError && (
+        <div
+          className="alert alert-danger alert-dismissible position-fixed top-0 start-50 translate-middle-x mt-3 shadow"
+          style={{ zIndex: 2000 }}
+          role="alert"
+        >
+          {actionError}
+          <button type="button" className="btn-close" onClick={() => setActionError(null)} aria-label="Cerrar" />
+        </div>
+      )}
     </>
   );
 
-  return { setEditingActivity, setDeletingActivity, modals };
+  return {
+    setEditingActivity,
+    setDeletingActivity,
+    setCancellingActivity,
+    publishActivity,
+    modals,
+  };
 }

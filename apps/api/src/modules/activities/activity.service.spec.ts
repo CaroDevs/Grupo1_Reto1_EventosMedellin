@@ -1,137 +1,162 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { ActivityService } from './activity.service';
-import { ActivityLocationPort, ActivityWithLocation } from './activity.location.port';
 import { PrismaService } from '../../database/prisma.service';
-import { Activity } from '@prisma/client';
+import { ActivityLocationPort, ActivityWithLocation } from './adapter/activity.location.port';
 
-// Prueba de que el Adapter (ActivityLocationPort / ActivityLocationAdapter)
-// cumple su promesa principal: ActivityService puede probarse por completo
-// con un mock del puerto, sin levantar PostgreSQL ni PostGIS.
-describe('ActivityService (uso del Adapter de ubicación)', () => {
-  let activityService: ActivityService;
-  let prisma: jest.Mocked<PrismaService>;
-  let locationPort: jest.Mocked<ActivityLocationPort>;
-
-  const baseActivity: Activity = {
-    id: 'act-1',
-    title: 'Cine al parque',
-    description: 'Proyección gratuita',
-    category: 'Cultura',
+function actividad(status: string, extra: Partial<ActivityWithLocation> = {}): ActivityWithLocation {
+  return {
+    id: 'a1',
+    title: 'Actividad',
+    description: 'Descripción',
+    category: 'Deportes',
     city: 'Medellín',
     price: 0,
     capacity: 50,
-    startDate: '2026-12-01',
-    createdAt: new Date('2026-11-01'),
-    updatedAt: new Date('2026-11-01'),
-  };
+    startDate: '2999-01-01T00:00:00.000Z',
+    status,
+    createdAt: new Date('2026-01-01'),
+    updatedAt: null,
+    latitude: 6.2,
+    longitude: -75.5,
+    ...extra,
+  } as ActivityWithLocation;
+}
 
-  const withLocation: ActivityWithLocation = {
-    ...baseActivity,
-    latitude: 6.2679,
-    longitude: -75.5658,
-  };
+describe('ActivityService', () => {
+  let prisma: { activity: { updateMany: jest.Mock; update: jest.Mock; count: jest.Mock; create: jest.Mock; delete: jest.Mock } };
+  let port: { findAll: jest.Mock; findById: jest.Mock; setCoordinates: jest.Mock };
+  let service: ActivityService;
 
   beforeEach(() => {
     prisma = {
       activity: {
-        create: jest.fn().mockResolvedValue(baseActivity),
-        update: jest.fn().mockResolvedValue(baseActivity),
-        delete: jest.fn().mockResolvedValue(baseActivity),
-        count: jest.fn().mockResolvedValue(1),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 } as never),
+        update: jest.fn().mockResolvedValue({} as never),
+        count: jest.fn().mockResolvedValue(3 as never),
+        create: jest.fn(),
+        delete: jest.fn(),
       },
-    } as unknown as jest.Mocked<PrismaService>;
-
-    locationPort = {
-      findAll: jest.fn().mockResolvedValue([withLocation]),
-      findById: jest.fn().mockResolvedValue(withLocation),
-      setCoordinates: jest.fn().mockResolvedValue(undefined),
-    } as unknown as jest.Mocked<ActivityLocationPort>;
-
-    activityService = new ActivityService(prisma, locationPort);
+    };
+    port = {
+      findAll: jest.fn().mockResolvedValue([] as never),
+      findById: jest.fn(),
+      setCoordinates: jest.fn(),
+    };
+    service = new ActivityService(
+      prisma as unknown as PrismaService,
+      port as unknown as ActivityLocationPort,
+    );
   });
 
-  describe('create', () => {
-    it('crea la actividad con Prisma y delega las coordenadas en el puerto cuando vienen en el DTO', async () => {
-      const result = await activityService.create({
-        title: 'Cine al parque',
-        category: 'Cultura',
-        city: 'Medellín',
-        latitude: 6.2679,
-        longitude: -75.5658,
-      } as any);
+  describe('publish / cancel', () => {
+    it('publica un borrador con escritura condicionada al estado leído', async () => {
+      port.findById
+        .mockResolvedValueOnce(actividad('DRAFT') as never)
+        .mockResolvedValueOnce(actividad('PUBLISHED') as never);
 
-      expect(prisma.activity.create).toHaveBeenCalledTimes(1);
-      expect(locationPort.setCoordinates).toHaveBeenCalledWith('act-1', 6.2679, -75.5658);
-      expect(locationPort.findById).toHaveBeenCalledWith('act-1');
-      expect(result).toEqual(withLocation);
+      const result = await service.publish('a1');
+
+      expect(prisma.activity.updateMany).toHaveBeenCalledWith({
+        where: { id: 'a1', status: 'DRAFT' },
+        data: { status: 'PUBLISHED' },
+      });
+      expect(result.status).toBe('PUBLISHED');
     });
 
-    it('no llama a setCoordinates si el DTO no trae latitude/longitude', async () => {
-      await activityService.create({
-        title: 'Cine al parque',
-        category: 'Cultura',
-        city: 'Medellín',
-      } as any);
+    it('cancela una actividad publicada', async () => {
+      port.findById
+        .mockResolvedValueOnce(actividad('PUBLISHED') as never)
+        .mockResolvedValueOnce(actividad('CANCELLED') as never);
 
-      expect(locationPort.setCoordinates).not.toHaveBeenCalled();
-    });
-  });
+      await service.cancel('a1');
 
-  describe('findAll / findOne', () => {
-    it('findAll delega los filtros en el puerto', async () => {
-      const filters = { category: 'Cultura' };
-      const result = await activityService.findAll(filters);
-
-      expect(locationPort.findAll).toHaveBeenCalledWith(filters);
-      expect(result).toEqual([withLocation]);
+      expect(prisma.activity.updateMany).toHaveBeenCalledWith({
+        where: { id: 'a1', status: 'PUBLISHED' },
+        data: { status: 'CANCELLED' },
+      });
     });
 
-    it('findOne delega en el puerto por id', async () => {
-      const result = await activityService.findOne('act-1');
+    it('transición inválida lanza 409 y no escribe', async () => {
+      port.findById.mockResolvedValue(actividad('CANCELLED') as never);
 
-      expect(locationPort.findById).toHaveBeenCalledWith('act-1');
-      expect(result).toEqual(withLocation);
+      await expect(service.publish('a1')).rejects.toThrow(ConflictException);
+      expect(prisma.activity.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('carrera (updateMany count 0) lanza 409', async () => {
+      port.findById.mockResolvedValue(actividad('DRAFT') as never);
+      prisma.activity.updateMany.mockResolvedValue({ count: 0 } as never);
+
+      await expect(service.publish('a1')).rejects.toThrow(ConflictException);
+      await expect(service.cancel('a1')).rejects.toThrow(ConflictException);
     });
   });
 
   describe('update', () => {
-    it('actualiza los campos planos con Prisma y las coordenadas con el puerto', async () => {
-      await activityService.update('act-1', {
-        title: 'Cine al parque (reprogramado)',
-        latitude: 6.3,
-        longitude: -75.6,
-      } as any);
+    it.each(['CANCELLED', 'FINISHED'])('se bloquea en estado %s', async (status) => {
+      port.findById.mockResolvedValue(actividad(status) as never);
+
+      await expect(service.update('a1', { title: 'Nuevo' })).rejects.toThrow(ConflictException);
+      expect(prisma.activity.update).not.toHaveBeenCalled();
+    });
+
+    it('permite editar un borrador', async () => {
+      port.findById.mockResolvedValue(actividad('DRAFT') as never);
+
+      await service.update('a1', { title: 'Nuevo' });
 
       expect(prisma.activity.update).toHaveBeenCalledWith({
-        where: { id: 'act-1' },
-        data: { title: 'Cine al parque (reprogramado)' },
+        where: { id: 'a1' },
+        data: { title: 'Nuevo' },
       });
-      expect(locationPort.setCoordinates).toHaveBeenCalledWith('act-1', 6.3, -75.6);
-    });
-
-    it('no toca las coordenadas si el DTO no las incluye', async () => {
-      await activityService.update('act-1', { title: 'Solo cambia el título' } as any);
-
-      expect(locationPort.setCoordinates).not.toHaveBeenCalled();
     });
   });
 
-  describe('remove', () => {
-    it('elimina la actividad vía Prisma', async () => {
-      const result = await activityService.remove('act-1');
+  describe('visibilidad', () => {
+    it('findOne anónimo de un borrador lanza 404', async () => {
+      port.findById.mockResolvedValue(actividad('DRAFT') as never);
 
-      expect(prisma.activity.delete).toHaveBeenCalledWith({ where: { id: 'act-1' } });
-      expect(result).toEqual(baseActivity);
+      await expect(service.findOne('a1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('findOne de un usuario sin rol de gestión no ve borradores', async () => {
+      port.findById.mockResolvedValue(actividad('DRAFT') as never);
+
+      await expect(service.findOne('a1', { role: 'User' })).rejects.toThrow(NotFoundException);
+    });
+
+    it('findOne anónimo de una publicada la devuelve', async () => {
+      port.findById.mockResolvedValue(actividad('PUBLISHED') as never);
+
+      await expect((service.findOne('a1'))).resolves.toMatchObject({ id: 'a1' });
+    });
+
+    it('findOne de un admin ve un borrador', async () => {
+      port.findById.mockResolvedValue(actividad('DRAFT') as never);
+
+      await expect(service.findOne('a1', { role: 'Admin' })).resolves.toMatchObject({ status: 'DRAFT' });
+    });
+
+    it('findAll anónimo pasa solo estados públicos al adapter', async () => {
+      await service.findAll({});
+
+      expect(port.findAll).toHaveBeenCalledWith({}, ['PUBLISHED']);
+    });
+
+    it('findAll de admin y organizador no filtra por estado', async () => {
+      port.findAll.mockResolvedValue([actividad('DRAFT'), actividad('CANCELLED', { id: 'a2' })] as never);
+
+      const admin = await service.findAll({}, { role: 'Admin' });
+      await service.findAll({}, { role: 'Organizer' });
+
+      expect(port.findAll).toHaveBeenNthCalledWith(1, {}, undefined);
+      expect(port.findAll).toHaveBeenNthCalledWith(2, {}, undefined);
+      expect(admin).toHaveLength(2);
     });
   });
 
-  describe('count', () => {
-    it('cuenta todas las actividades directamente con Prisma, sin pasar por el puerto', async () => {
-      const result = await activityService.count();
-
-      expect(prisma.activity.count).toHaveBeenCalledTimes(1);
-      expect(locationPort.findAll).not.toHaveBeenCalled();
-      expect(result).toBe(1);
-    });
+  it('count() cuenta las actividades', async () => {
+    await expect(service.count()).resolves.toBe(3);
   });
 });

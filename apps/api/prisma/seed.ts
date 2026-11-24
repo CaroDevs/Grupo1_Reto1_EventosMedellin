@@ -83,7 +83,7 @@ async function main() {
     const exists = await prisma.activity.findFirst({ where: { title: data.title } });
     if (exists) continue;
 
-    const activity = await prisma.activity.create({ data });
+    const activity = await prisma.activity.create({ data: { ...data, status: 'PUBLISHED' } });
 
     // location es una columna PostGIS (geography) — Prisma Client no la
     // puede escribir directo, por eso va con SQL crudo (ver ActivityService).

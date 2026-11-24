@@ -37,10 +37,16 @@ export class ActivityHelpers {
     }
 
     if (domain.status !== activity.status) {
-      await prisma.activity.update({
-        where: { id: activity.id },
+      // Escritura condicionada al estado leído: si otra petición ya cambió la
+      // actividad (count 0) simplemente se ignora, no hay nada que forzar.
+      const result = await prisma.activity.updateMany({
+        where: { id: activity.id, status: activity.status },
         data: { status: domain.status },
       });
+
+      if (result.count === 0) {
+        return activity;
+      }
     }
 
     return {
